@@ -26,10 +26,8 @@ import plotly
 import plotly.plotly as py #for plotting
 import plotly.offline as offline
 import plotly.graph_objs as go
-plotly.tools.set_credentials_file(username='dpsugasa', api_key='yuwwkc1sb0')
 import plotly.tools as tls
 import plotly.figure_factory as ff
-tls.embed('https://plot.ly/~dpsugasa/1/')
 import cufflinks as cf
 import credentials
 import quandl
