@@ -56,6 +56,9 @@ df2['RS_Shift'] = df2['Retail_Sales'].diff(12) #use 12m differencing to remove t
 df2['RS_Shift_3m'] = df2['RS_Shift'].rolling(window=3).mean()
 df2['RS_Shift_6m'] = df2['RS_Shift'].rolling(window=6).mean()
 
+#FRED/RETAILSMSA
+
+
 #Motor Vehicle Retail Sales: Domestic and Foreign Autos Seasonally Adjusted Annualized Rate
 mgr = dm.BbgDataManager()
 # set dates, securities, and fields
