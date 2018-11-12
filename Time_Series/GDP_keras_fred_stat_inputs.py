@@ -4,8 +4,7 @@ Created on Wed Oct 31 10:42:02 2018
 
 Building a new GDP model. 
 'Now Casting with Keras':  trying to predict YoY change in GDP
-No effort to make the input time series stationary
-
+Changing the input data by using 12 month differencing
 
 @author: dpsugasa
 """
@@ -42,7 +41,7 @@ import plotly.figure_factory as ff
 import credentials
 
 
-booty = {'INDPRO':   'IP',               #Industrial Production
+indics = {'INDPRO':   'IP',               #Industrial Production
         'NETEXP':   'Exports',          #Net Exports of Goods and Services
         'EXPGSC1':  'Real_Exports',     #Real Exports of Goods and Services
         'DGORDER':  'NewOrders',        #Manufacturers' New Orders: Durable Goods
@@ -60,15 +59,33 @@ booty = {'INDPRO':   'IP',               #Industrial Production
         'UMCSENT':      'UMich',        #University of Michigan: Consumer Sentiment
         }
 
+non_stat = ['IP',
+            'Exports',
+            'Real_Exports',
+            'NewOrders',
+            'NewOrders_NoDef',
+            'Real_PCE',
+            'Real_Imports',
+            'Imports',
+            'Wk_hrs_manu',
+            'Wk_hrs_priv',          
+            'Tot_veh_sales',
+            'Lt_wght_veh',
+            'Heavy_trucks',
+            ]
+
 d = {} #dict of data
 
-for code, name in booty.items():
+for code, name in indics.items():
     d[name] = fred.get_series_latest_release(code)
     d[name] = d[name].resample('M').last()
     d[name] = d[name].interpolate(method = 'linear')
-    
-frames = [d[i] for i in booty.values()]
-columns = [i for i in booty.values()]
+
+for i in non_stat:
+    d[i] =  d[i].diff(12)
+   
+frames = [d[i] for i in indics.values()]
+columns = [i for i in indics.values()]
 
 baf = pd.concat(frames, keys = columns, join = 'outer', axis = 1)
 baf = baf.fillna(method = 'ffill')
