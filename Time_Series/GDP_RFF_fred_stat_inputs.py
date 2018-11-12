@@ -98,7 +98,7 @@ columns = [i for i in indics.values()]
 
 baf = pd.concat(frames, keys = columns, join = 'outer', axis = 1)
 baf = baf.fillna(method = 'ffill')
-baf = baf.dropna()
+
 
 #ISM Manufacturing PMI Composite Index
 start_date = '01/01/1980'
@@ -126,7 +126,7 @@ df2 = df2.rename(columns = {'CONCCONF Index':'Con_Conf'})
 frames2 = [baf, df, df2]
 baf2 = pd.concat(frames2, join = 'outer', axis = 1)
 baf2 = baf.fillna(method = 'ffill')
-baf2 = baf.dropna()
+
 
 '''
 Create Ouput
@@ -163,6 +163,13 @@ baf2['GDP_SMA6']  = gdp_sma6
 baf2['GDP_SMA12'] = gdp_sma12
 baf2['GDP_EMA6'] = gdp_ema6
 baf2['GDP_EMA3'] = gdp_ema3
+
+#create a dataframe that will be used for new predictions
+pred_df = baf2
+pred_df = pred_df.fillna(method = 'ffill')
+niner = pred_df.iloc[-1].values
+niner = niner.reshape(1,-1)
+
 
 #add output to dataframe
 baf2['GDP'] = output
@@ -211,7 +218,7 @@ print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
 
 # calculate root mean squared error
 trainScore_2 = np.sqrt(mean_squared_error(baf2['GDP'], totalPredict))
-print('LSTM_REMSE_Full  Score: %.4f RMSE' % (trainScore_2))
+print('LSTM_RMSE_Full  Score: %.4f RMSE' % (trainScore_2))
 
 #Create dataframe with existing GDP and also the predicted values
 final_df = pd.DataFrame(baf2['GDP'])
@@ -271,9 +278,9 @@ y_train, y_test = y[0:train_split], y[train_split:]
 def Grid_Search_CV_RFR(X_train, y_train):
     reg = RandomForestRegressor()
     param_grid = { 
-            "n_estimators"      : [25,50,100,500,1000],
-            "max_features"      : ["auto", 4, 6],
-            "min_samples_leaf" : [1,5,10,20]
+            "n_estimators"      : [10,25,50,100,500],
+            "max_features"      : ["auto"],
+            "min_samples_leaf" : [1,5,10]
             }
 
     tss_splits = TimeSeriesSplit(n_splits=10).split(X_train)
@@ -344,7 +351,8 @@ def create_trace(df, color, label):
         x = dates,
         y = prices,
         name = label,
-        line = dict(color=color)
+        line = dict(color=color,
+                    width=1.5)
     )
     return trace
 
@@ -365,6 +373,10 @@ layout = dict(title = 'GDP Prediction_RF',
 fig = dict(data=data, layout=layout)
 
 py.iplot(fig, filename='Macro_Data/GDP/RFE/full-series')
+
+next = rfr.predict(niner)
+print(next)
+
 
 print ("Time to complete:", datetime.now() - start_time)
 
