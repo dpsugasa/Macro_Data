@@ -17,11 +17,11 @@ import quandl
 #from sklearn.model_selection import train_test_split
 #from sklearn.svm import SVR
 import fbprophet
-from fbprophet.diagnostics import cross_validation
-from fredapi import Fred
+from fbprophet.diagnostics import cross_validation, performance_metrics
+#from fredapi import Fred
 import credentials
 
-fred = Fred(api_key=fred_api)
+#fred = Fred(api_key=fred_api)
 
 #set script starting time
 start_time = datetime.now()
@@ -63,21 +63,39 @@ non_stat = ['IP',
 d = {} #dict of data
 df_fcast = {}
 dfp = {}
+cv = {}
+perf = {}
 
 for code, name in indics.items():
     d[name] = fred.get_series_latest_release(code)
-    d[name] = d[name].resample('M').last()
+    d[name] = d[name].resample('B').last()
     d[name] = d[name].interpolate(method = 'linear')
     d[name] = d[name].to_frame()
     
-    d[name] = d[name].rename(columns={0 : 'y'})
-    d[name]['y'] = d[name]['y']
-    d[name]['ds'] = d[name].index
-    dfp[name] = fbprophet.Prophet(
-                 weekly_seasonality=False, yearly_seasonality=True,
-                 ).fit(d[name])
-    df_fcast[name] = dfp[name].make_future_dataframe(periods=6, freq = 'M')
-    df_fcast[name] = dfp[name].predict(df_fcast[name])
+#    d[name] = d[name].rename(columns={0 : 'y'})
+#    d[name]['y'] = d[name]['y']
+#    d[name]['ds'] = d[name].index
+#    dfp[name] = fbprophet.Prophet(
+#                 weekly_seasonality=False, yearly_seasonality=True,
+#                 ).fit(d[name])
+#    df_fcast[name] = dfp[name].make_future_dataframe(periods=6, freq = 'M')
+#    df_fcast[name] = dfp[name].predict(df_fcast[name])
+#    cv[name] = cross_validation(dfp[name], horizon = '12 days')
+#    perf[name] = performance_metrics(cv[name])
+
+
+d['IP'] = d['IP'].rename(columns = {0:'y'})
+d['IP']['y'] = d['IP']['y']
+d['IP']['ds'] = d['IP'].index
+
+dfp['IP'] = fbprophet.Prophet(seasonality_mode = 'multiplicative').fit(d['IP'])
+df_fcast['IP'] = dfp['IP'].make_future_dataframe(periods = 180, freq = 'D')
+df_fcast['IP'] = dfp['IP'].predict(df_fcast['IP'])
+
+cv['IP'] = cross_validation(dfp['IP'], horizon = '180 days' )
+
+
+
 
 
 # Make a future dataframe for 2 years

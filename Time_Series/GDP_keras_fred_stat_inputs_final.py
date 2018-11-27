@@ -42,10 +42,10 @@ import plotly.offline as offline
 import plotly.graph_objs as go
 import plotly.tools as tls
 import plotly.figure_factory as ff
-from fredapi import Fred
+#from fredapi import Fred
 import credentials
 
-fred = Fred(api_key=fred_api)
+#fred = Fred(api_key=fred_api)
 
 #set script starting time
 start_time = datetime.now()

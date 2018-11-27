@@ -17,7 +17,9 @@ import matplotlib.pyplot as plt
 #from sklearn.model_selection import train_test_split
 #from sklearn.svm import SVR
 import fbprophet
-from fbprophet.diagnostics import cross_validation
+from fbprophet.diagnostics import cross_validation, performance_metrics
+from fbprophet.plot import plot_cross_validation_metric
+
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 #set plot parameters
@@ -37,7 +39,7 @@ mgr = dm.BbgDataManager()
 # set dates, securities, and fields
 start_date = "{:%m/%d/%Y}".format(datetime.now() - relativedelta(days=500)) #500 trading days
 end_date = "{:%m/%d/%Y}".format(datetime.now())
-IDs = ['SCR FP Equity', 'SX5E Index', 'UCG IM Equity']
+IDs = ['SX5E Index', 'UCG IM Equity']
 
 sids = mgr[IDs]
 fields = ['LAST PRICE', 'HIGH', 'LOW']
@@ -83,7 +85,7 @@ for name in IDs:
     d[name]['STARC%'] = ((d[name]['y'] - d[name]['LB'])/d[name]['STARCWidth'])*100
     
     #build models and fit to data
-    m[name] = fbprophet.Prophet(changepoint_prior_scale=0.15,
+    m[name] = fbprophet.Prophet(
                  weekly_seasonality=False, yearly_seasonality=True,
                  interval_width=0.8)
     m[name].fit(d[name])
@@ -112,36 +114,39 @@ for name in IDs:
     ev[name] = ev[name].dropna()
     #m[name].plot(ev[name], xlabel = 'Date', ylabel = name)
     
-    print(name, "R2: ", r2_score(ev[name]['y'], ev[name]['yhat']))
-    print(name, "R2_MA_E: ", r2_score(ev[name]['y'], ev[name]['MA_E']))
-    print(name, "RMSE: ", np.sqrt(mean_squared_error(ev[name]['y'], ev[name]['yhat'])))
-    print(name, "MAE: ", mean_absolute_error(ev[name]['y'], ev[name]['yhat']))
-    print(name, "MAPE: ", mape_vectorized_v2(ev[name]['y'], ev[name]['yhat']))
-    print(name, "RMSE_MA_E: ", np.sqrt(mean_squared_error(ev[name]['y'], ev[name]['MA_E'])))
-    print(name, "RMSE_UB: ", np.sqrt(mean_squared_error(ev[name]['yhat_upper'], ev[name]['UB'])))
-    print(name, "RMSE_LB: ", np.sqrt(mean_squared_error(ev[name]['yhat_lower'], ev[name]['LB'])))
+#    print(name, "R2: ", r2_score(ev[name]['y'], ev[name]['yhat']))
+#    print(name, "R2_MA_E: ", r2_score(ev[name]['y'], ev[name]['MA_E']))
+#    print(name, "RMSE: ", np.sqrt(mean_squared_error(ev[name]['y'], ev[name]['yhat'])))
+#    print(name, "MAE: ", mean_absolute_error(ev[name]['y'], ev[name]['yhat']))
+#    print(name, "MAPE: ", mape_vectorized_v2(ev[name]['y'], ev[name]['yhat']))
+#    print(name, "RMSE_MA_E: ", np.sqrt(mean_squared_error(ev[name]['y'], ev[name]['MA_E'])))
+#    print(name, "RMSE_UB: ", np.sqrt(mean_squared_error(ev[name]['yhat_upper'], ev[name]['UB'])))
+#    print(name, "RMSE_LB: ", np.sqrt(mean_squared_error(ev[name]['yhat_lower'], ev[name]['LB'])))
     
     
             
     #cross validation takes forever
     y[name] = cross_validation(m[name], horizon = '90 days')
+    ev[name] = performance_metrics(y[name])
+    #fig = plot_cross_validation_metric(y[name], metric='mape')
+    
     #y[name]['y_act'] = np.exp(y[name]['y'])
     #y[name]['y_predict'] = np.exp(y[name]['yhat'])
     #print(df_cv.tail())
     #print(name, "RMSE_CrossVal: ", np.sqrt(mean_squared_error(y[name]['y'], y[name]['yhat'])))
-    ev[name][['yhat_upper', 'UB']].plot()
-    ev[name][['yhat', 'MA_E']].plot()
-    ev[name]['HIGH'] = d[name]['HIGH']
-    ev[name]['LOW'] = d[name]['LOW']
-    #ev[name]['y'] = np.exp(d[name]['y'])
-    ev[name]['ST_Miss'] = ev[name].apply(lambda x: 1 if x['HIGH'] > x['UB'] or x['LOW'] < x['LB'] else 0, axis=1)
-    ev[name]['ST_Hit'] = ev[name].apply(lambda x: 1 if x['y'] < x['UB'] and x['y'] > x['LB'] else 0, axis=1)
-    ev[name]['yhat_Miss'] = ev[name].apply(lambda x: 1 if x['HIGH'] > x['yhat_upper'] or x['LOW'] < x['yhat_lower'] else 0, axis=1)
-    ev[name]['yhat_Hit'] = ev[name].apply(lambda x: 1 if x['y'] < x['yhat_upper'] and x['y'] > x['yhat_lower'] else 0, axis=1)
-    print ("ST Miss: %s"  % (ev[name]['ST_Miss'].sum()/len(ev[name]['y'])))
-    print ("ST Hit: %s"  % (ev[name]['ST_Hit'].sum()/len(ev[name]['y'])))
-    print ("yhat Miss: %s"  % (ev[name]['yhat_Miss'].sum()/len(ev[name]['y'])))
-    print ("yhat Hit: %s"  % (ev[name]['yhat_Hit'].sum()/len(ev[name]['y'])))
+#    ev[name][['yhat_upper', 'UB']].plot()
+#    ev[name][['yhat', 'MA_E']].plot()
+#    ev[name]['HIGH'] = d[name]['HIGH']
+#    ev[name]['LOW'] = d[name]['LOW']
+#    #ev[name]['y'] = np.exp(d[name]['y'])
+#    ev[name]['ST_Miss'] = ev[name].apply(lambda x: 1 if x['HIGH'] > x['UB'] or x['LOW'] < x['LB'] else 0, axis=1)
+#    ev[name]['ST_Hit'] = ev[name].apply(lambda x: 1 if x['y'] < x['UB'] and x['y'] > x['LB'] else 0, axis=1)
+#    ev[name]['yhat_Miss'] = ev[name].apply(lambda x: 1 if x['HIGH'] > x['yhat_upper'] or x['LOW'] < x['yhat_lower'] else 0, axis=1)
+#    ev[name]['yhat_Hit'] = ev[name].apply(lambda x: 1 if x['y'] < x['yhat_upper'] and x['y'] > x['yhat_lower'] else 0, axis=1)
+#    print ("ST Miss: %s"  % (ev[name]['ST_Miss'].sum()/len(ev[name]['y'])))
+#    print ("ST Hit: %s"  % (ev[name]['ST_Hit'].sum()/len(ev[name]['y'])))
+#    print ("yhat Miss: %s"  % (ev[name]['yhat_Miss'].sum()/len(ev[name]['y'])))
+#    print ("yhat Hit: %s"  % (ev[name]['yhat_Hit'].sum()/len(ev[name]['y'])))
     
 #measure the time it takes to run the script
 
