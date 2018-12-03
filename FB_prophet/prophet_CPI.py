@@ -27,7 +27,7 @@ start_time = datetime.now()
 # create a DataManager5 for simpler api access
 mgr = dm.BbgDataManager()
 # set dates, securities, and fields
-start_date = '06/01/1950'
+start_date = '06/01/1990'
 end_date = "{:%m/%d/%Y}".format(datetime.now())
 IDs = ['CPI YOY Index']
 
@@ -35,7 +35,10 @@ sids = mgr[IDs]
 fields = ['LAST PRICE']
 
 df = sids.get_historical(fields, start_date, end_date)
+df = df.resample('B').last()
+df = df.interpolate('linear')
 df = df.fillna(method = 'ffill')
+
 df.columns = df.columns.droplevel(-1)
 #df = df.stack(level = 0, dropna=False)
 #df['y_orig'] = df['CPI YOY Index']
@@ -44,14 +47,14 @@ df.columns = df.columns.droplevel(-1)
 df = df.rename(columns={'date': 'ds', 'CPI YOY Index': 'y'})
 df['ds'] = df.index
 
-df_prophet = fbprophet.Prophet(changepoint_prior_scale=0.75,
-                 weekly_seasonality=False, yearly_seasonality=False,
+df_prophet = fbprophet.Prophet(interval_width = 0.80
+                 #weekly_seasonality=False, yearly_seasonality=True,
                  ).fit(df)
 #df_prophet.add_regressor(df['VOLUME'])
 #df_prophet.fit(df)
 
 # Make a future dataframe for 2 years
-df_forecast = df_prophet.make_future_dataframe(periods=3, freq = 'M')
+df_forecast = df_prophet.make_future_dataframe(periods=180) #freq = 'MS')
 # Make predictions
 df_forecast = df_prophet.predict(df_forecast)
 
