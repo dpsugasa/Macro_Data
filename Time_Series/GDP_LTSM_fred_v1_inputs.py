@@ -101,6 +101,9 @@ for code, name in indics.items():
 for i in non_stat:
     d[i] =  d[i].diff(12)
     
+
+d['UMich'] = pd.DataFrame(d['UMich'], columns = ['Last'])
+
 '''
 #######################
 Create the final prediction dataframe and array of predictions
@@ -113,32 +116,40 @@ fin_idx = d['UMich'].index.union(pd.date_range(d['UMich'].index[-1]+1,
                                    periods=pred_periods,
                                    freq=d['UMich'].index.freq))
 pred_df = pd.DataFrame(index=fin_idx)
+pred_df['Last'] = d['UMich']['Last']
 
 #array to append predictions to
+pred_array = d['UMich']['Last'].values
 
+'''
+#######################
+Create Inputs
+#######################
+'''
 
-    
-d['UMich'] = pd.DataFrame(d['UMich'], columns = ['Last'])
-b_snax = d['UMich']['Last'].values
-    
 # create multiple features with shifted dated
 for i in range(1,13):
     d['UMich'][f'Shift_{i}'] = d['UMich']['Last'].shift(i)
     
-#create multiple features with diff data
-
+#create multiple features with diff data; don't use Forward Information!
 for i in range(1,13):
     d['UMich'][f'Diff_{i}'] = d['UMich']['Shift_1'].diff(i)
     
-#create some moving average features
+#create some moving average features; don't use Forward Information!
 for i in range(3,10):
     d['UMich'][f'SMA_{i}'] = d['UMich']['Shift_1'].rolling(window=i).mean()
     d['UMich'][f'EMA_{i}'] = d['UMich']['Shift_1'].ewm(i).mean()
     
 d['UMich'] = d['UMich'].fillna(method='ffill').dropna()
 
+'''
+#######################
+Create Dataframe for new predictions
+#######################
+'''
+
 #create a dataframe that will be used for new predictions
-pred_df = pd.DataFrame(d['UMich']['Last'])
+pred_next_step = pred_df.dropna()
 pred_df = pred_df.fillna(method = 'ffill')
 for i in range(1,12):
     pred_df[f'Shift_{i}'] = pred_df['Last'].shift(i)
@@ -205,10 +216,7 @@ new_pred = np.reshape(new_pred, (new_pred.shape[0], 1, new_pred.shape[1]))
 next_2 = scalery.inverse_transform(model.predict((new_pred)))
 print(next_2)
 
-
-fuck = final_df.index.union(pd.date_range(final_df.index[-1]+1, periods=2, freq=final_df.index.freq))
  
-dicky = pd.DataFrame(index = fuck)   
     
     
     
