@@ -52,10 +52,10 @@ fred = Fred(api_key=fred_api)
 #set script starting time
 start_time = datetime.now()
 
-def multi_diff(series, num=12):
-    for i in range(1,num):
-        series.shift(i)
-        return series
+#def multi_diff(series, num=12):
+#    for i in range(1,num):
+#        series.shift(i)
+#        return series
 
 
 indics = {'INDPRO':   'IP',               #Industrial Production
@@ -101,12 +101,114 @@ for code, name in indics.items():
 for i in non_stat:
     d[i] =  d[i].diff(12)
     
-d['UMich'] = pd.DataFrame(d['UMich'], columns = ['Last'])
+'''
+#######################
+Create the final prediction dataframe and array of predictions
+#######################
+'''
+
+#final dataframe with new predictions; will be fed to the GDP model
+pred_periods = 6
+fin_idx = d['UMich'].index.union(pd.date_range(d['UMich'].index[-1]+1,
+                                   periods=pred_periods,
+                                   freq=d['UMich'].index.freq))
+pred_df = pd.DataFrame(index=fin_idx)
+
+#array to append predictions to
+
+
     
+d['UMich'] = pd.DataFrame(d['UMich'], columns = ['Last'])
+b_snax = d['UMich']['Last'].values
+    
+# create multiple features with shifted dated
 for i in range(1,13):
     d['UMich'][f'Shift_{i}'] = d['UMich']['Last'].shift(i)
-   
     
+#create multiple features with diff data
+
+for i in range(1,13):
+    d['UMich'][f'Diff_{i}'] = d['UMich']['Shift_1'].diff(i)
+    
+#create some moving average features
+for i in range(3,10):
+    d['UMich'][f'SMA_{i}'] = d['UMich']['Shift_1'].rolling(window=i).mean()
+    d['UMich'][f'EMA_{i}'] = d['UMich']['Shift_1'].ewm(i).mean()
+    
+d['UMich'] = d['UMich'].fillna(method='ffill').dropna()
+
+#create a dataframe that will be used for new predictions
+pred_df = pd.DataFrame(d['UMich']['Last'])
+pred_df = pred_df.fillna(method = 'ffill')
+for i in range(1,12):
+    pred_df[f'Shift_{i}'] = pred_df['Last'].shift(i)
+    
+for i in range(1,13):
+    pred_df[f'Diff_{i}'] = pred_df['Last'].diff(i)
+    
+#create some moving average features
+for i in range(3,10):
+    pred_df[f'SMA_{i}'] = pred_df['Last'].rolling(window=i).mean()
+    pred_df[f'EMA_{i}'] = pred_df['Last'].ewm(i).mean()
+    
+pred_niner = pred_df.iloc[-1].values
+pred_niner = pred_niner.reshape(1,-1)
+#pred_niner = np.reshape(pred_niner, (pred_niner.shape[0], 1, pred_niner.shape[1]))
+    
+
+X, y = d['UMich'].values[:, 1:39], d['UMich']['Last'].values
+y = y.reshape(-1,1)
+scalerx = pre.MinMaxScaler(feature_range=(0,1)).fit(X)
+x_scale = scalerx.transform(X)
+scalery = pre.MinMaxScaler(feature_range=(0,1)).fit(y)
+y_scale = scalery.transform(y)
+
+train_split = int(len(d['UMich'])*0.75)
+
+X_train, X_test = x_scale[0:train_split], x_scale[train_split:]
+y_train, y_test = y_scale[0:train_split], y_scale[train_split:]
+
+X_train = np.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))
+X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
+
+#Create model
+model = Sequential()
+model.add(LSTM(32, input_shape = (1,38)) )#activation='relu'))
+model.add(Dense(16)) #activation='relu'#model.add(Dense(8))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+model.fit(X_train, y_train, epochs=1000, batch_size=20, verbose=2)
+
+#generate predictions for training
+trainPredict = scalery.inverse_transform(model.predict(X_train))
+testPredict = scalery.inverse_transform(model.predict(X_test))
+totalPredict = np.concatenate((trainPredict,testPredict), axis=0)
+
+trainScore = model.evaluate(X_train, y_train, verbose=0)
+print ('LSTM_RMSE_Train Score: %.4f' % (sqrt(trainScore)))
+testScore = model.evaluate(X_test, y_test, verbose=0)
+print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
+
+# calculate root mean squared error
+trainScore_2 = np.sqrt(mean_squared_error(d['UMich']['Last'], totalPredict))
+print('LSTM_RMSE_Full  Score: %.4f RMSE' % (trainScore_2))
+
+#Create dataframe with existing GDP and also the predicted values
+final_df = pd.DataFrame(d['UMich']['Last'])
+final_df['pred'] = totalPredict
+
+#create quick plot
+final_df.plot()
+
+new_pred = scalerx.transform(pred_niner)
+new_pred = np.reshape(new_pred, (new_pred.shape[0], 1, new_pred.shape[1]))
+next_2 = scalery.inverse_transform(model.predict((new_pred)))
+print(next_2)
+
+
+fuck = final_df.index.union(pd.date_range(final_df.index[-1]+1, periods=2, freq=final_df.index.freq))
+ 
+dicky = pd.DataFrame(index = fuck)   
     
     
     
