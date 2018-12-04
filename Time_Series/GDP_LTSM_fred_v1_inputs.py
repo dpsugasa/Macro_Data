@@ -52,6 +52,11 @@ fred = Fred(api_key=fred_api)
 #set script starting time
 start_time = datetime.now()
 
+def multi_diff(series, num=12):
+    for i in range(1,num):
+        series.shift(i)
+        return series
+
 
 indics = {'INDPRO':   'IP',               #Industrial Production
         'NETEXP':   'Exports',          #Net Exports of Goods and Services
@@ -95,7 +100,18 @@ for code, name in indics.items():
 
 for i in non_stat:
     d[i] =  d[i].diff(12)
+    
+d['UMich'] = pd.DataFrame(d['UMich'], columns = ['Last'])
+    
+for i in range(1,13):
+    d['UMich'][f'Shift_{i}'] = d['UMich']['Last'].shift(i)
    
+    
+    
+    
+    
+    
+'''   
 frames = [d[i] for i in indics.values()]
 columns = [i for i in indics.values()]
 
@@ -132,7 +148,7 @@ baf2 = baf.fillna(method = 'ffill')
 
 
 '''
-Create Ouput
+#Create Ouput
 
 '''
 #GDP YOY
@@ -189,7 +205,7 @@ baf2['GDP'] = output
 baf2 = baf2.dropna()
 
 '''
-Create model
+#Create model
 '''
 
 X, y = baf2.values[:, 0:29], baf2.values[:, 29]
@@ -276,7 +292,7 @@ py.iplot(figure, filename = 'Macro_Data/GDP/LSTM/full-series')
 
 '''
 #####################
-now try Random Forest
+#now try Random Forest
 #####################
 '''
 
@@ -396,7 +412,7 @@ print('LSTM_next_GDP %.3f' % next_2)
 
 '''
 #####################
-now try LightBGM
+#now try LightBGM
 #####################
 '''
 
@@ -468,7 +484,7 @@ render_plot_importance(importance_type='split')
 
 '''
 #####################
-now try XGBoost
+#now try XGBoost
 #####################
 '''
 X, y = baf2.values[:, 0:29], baf2.values[:, 29]
@@ -488,7 +504,7 @@ rmse_test = np.sqrt(mean_squared_error(y_test, y_pred))
 print('XGB_RMSE_test: %.4f' % rmse_test)
 
 
-
+'''
 print ("Time to complete:", datetime.now() - start_time)
 
 
