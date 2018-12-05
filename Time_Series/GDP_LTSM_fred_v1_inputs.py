@@ -109,62 +109,78 @@ d['UMich'] = pd.DataFrame(d['UMich'], columns = ['Last'])
 Create the final prediction dataframe and array of predictions
 #######################
 '''
-
+t = {} #dict of indices
+p = {} #dict of prediction dataframes
 #final dataframe with new predictions; will be fed to the GDP model
 pred_periods = 6
-fin_idx = d['UMich'].index.union(pd.date_range(d['UMich'].index[-1]+1,
-                                   periods=pred_periods,
-                                   freq=d['UMich'].index.freq))
+for y in range(1,pred_periods + 1):
+    t[y] = d['UMich'].index.union(pd.date_range(d['UMich'].index[-1]+1,
+                                       periods=y,
+                                       freq=d['UMich'].index.freq))
+for r in range(1, pred_periods + 1):
+    p[r] = pd.DataFrame(index = t[r])
+    p[r]['Last'] = d['UMich']['Last']
+
 pred_df = pd.DataFrame(index=fin_idx)
 pred_df['Last'] = d['UMich']['Last']
 
+
 #array to append predictions to
 pred_array = d['UMich']['Last'].values
+pred_array_loop = pred_array
 
-'''
-#######################
-Create Inputs
-#######################
-'''
+k = {} #dict of prediction dfs
+z = {} #dict of dataframes for prediction
 
-# create multiple features with shifted dated
-for i in range(1,13):
-    d['UMich'][f'Shift_{i}'] = d['UMich']['Last'].shift(i)
-    
-#create multiple features with diff data; don't use Forward Information!
-for i in range(1,13):
-    d['UMich'][f'Diff_{i}'] = d['UMich']['Shift_1'].diff(i)
-    
-#create some moving average features; don't use Forward Information!
-for i in range(3,10):
-    d['UMich'][f'SMA_{i}'] = d['UMich']['Shift_1'].rolling(window=i).mean()
-    d['UMich'][f'EMA_{i}'] = d['UMich']['Shift_1'].ewm(i).mean()
-    
-d['UMich'] = d['UMich'].fillna(method='ffill').dropna()
 
-'''
-#######################
-Create Dataframe for new predictions
-#######################
-'''
+for i in range(0,pred_periods):
+    k[i] = pred_df
+    k[i] = k[i].dropna()
+    
+    '''
+    #######################
+    Create Inputs
+    #######################
+    '''
+    
+    # create multiple features with shifted data
+    for z in range(1,13):
+        k[i][f'Shift_{z}'] = k[i]['Last'].shift(z)
+        
+    #create multiple features with diff data; don't use Forward Information!
+    for q in range(1,13):
+        k[i][f'Diff_{q}'] = k[i]['Shift_1'].diff(q)
+        
+    #create some moving average features; don't use Forward Information!
+    for m in range(3,10):
+        k[i][f'SMA_{m}'] = k[i]['Shift_1'].rolling(window=m).mean()
+        k[i][f'EMA_{m}'] = k[i]['Shift_1'].ewm(m).mean()
+        
+    #d['UMich'] = d['UMich'].fillna(method='ffill').dropna()
 
-#create a dataframe that will be used for new predictions
-pred_next_step = pred_df.dropna()
-pred_df = pred_df.fillna(method = 'ffill')
-for i in range(1,12):
-    pred_df[f'Shift_{i}'] = pred_df['Last'].shift(i)
+    '''
+    #######################
+    Create Dataframe for new predictions
+    #######################
+    '''
     
-for i in range(1,13):
-    pred_df[f'Diff_{i}'] = pred_df['Last'].diff(i)
-    
-#create some moving average features
-for i in range(3,10):
-    pred_df[f'SMA_{i}'] = pred_df['Last'].rolling(window=i).mean()
-    pred_df[f'EMA_{i}'] = pred_df['Last'].ewm(i).mean()
-    
-pred_niner = pred_df.iloc[-1].values
-pred_niner = pred_niner.reshape(1,-1)
-#pred_niner = np.reshape(pred_niner, (pred_niner.shape[0], 1, pred_niner.shape[1]))
+    #create a dataframe that will be used for new predictions
+    z[i] = pred_df.dropna()
+    #pred_df = pred_df.fillna(method = 'ffill')
+    for zz in range(1,12):
+        z[i][f'Shift_{zz}'] = z[i]['Last'].shift(zz)
+        
+    for qq in range(1,13):
+        z[i][f'Diff_{qq}'] = z[i]['Last'].diff(qq)
+        
+    #create some moving average features
+    for mm in range(3,10):
+        z[i][f'SMA_{mm}'] = z[i]['Last'].rolling(window=mm).mean()
+        z[i][f'EMA_{mm}'] = z[i]['Last'].ewm(mm).mean()
+        
+    pred_new_inputs = pred_df.iloc[-1].values
+    pred_new_inputs = pred_new_inputs.reshape(1,-1)
+    #pred_niner = np.reshape(pred_niner, (pred_niner.shape[0], 1, pred_niner.shape[1]))
     
 
 X, y = d['UMich'].values[:, 1:39], d['UMich']['Last'].values
@@ -211,11 +227,11 @@ final_df['pred'] = totalPredict
 #create quick plot
 final_df.plot()
 
-new_pred = scalerx.transform(pred_niner)
+new_pred = scalerx.transform(pred_new_inputs)
 new_pred = np.reshape(new_pred, (new_pred.shape[0], 1, new_pred.shape[1]))
 next_2 = scalery.inverse_transform(model.predict((new_pred)))
 print(next_2)
-
+np.append(pred_array, next_2)
  
     
     
