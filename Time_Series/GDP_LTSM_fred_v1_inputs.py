@@ -113,28 +113,28 @@ t = {} #dict of indices
 p = {} #dict of prediction dataframes
 #final dataframe with new predictions; will be fed to the GDP model
 pred_periods = 6
-for y in range(1,pred_periods + 1):
+for y in range(0,pred_periods + 1):
     t[y] = d['UMich'].index.union(pd.date_range(d['UMich'].index[-1]+1,
                                        periods=y,
                                        freq=d['UMich'].index.freq))
-for r in range(1, pred_periods + 1):
+for r in range(0, pred_periods + 1):
     p[r] = pd.DataFrame(index = t[r])
     p[r]['Last'] = d['UMich']['Last']
 
-pred_df = pd.DataFrame(index=fin_idx)
-pred_df['Last'] = d['UMich']['Last']
 
 
+'''not sure about this
 #array to append predictions to
 pred_array = d['UMich']['Last'].values
 pred_array_loop = pred_array
+'''
 
 k = {} #dict of prediction dfs
 z = {} #dict of dataframes for prediction
 
 
 for i in range(0,pred_periods):
-    k[i] = pred_df
+    k[i] = p[i]
     k[i] = k[i].dropna()
     
     '''
