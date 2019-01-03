@@ -131,6 +131,7 @@ pred_array_loop = pred_array
 
 k = {} #dict of prediction dfs
 z = {} #dict of dataframes for prediction
+o = {} #dict of new inputs
 
 
 for i in range(0,pred_periods):
@@ -165,7 +166,7 @@ for i in range(0,pred_periods):
     '''
     
     #create a dataframe that will be used for new predictions
-    z[i] = pred_df.dropna()
+    z[i] = p[i]
     #pred_df = pred_df.fillna(method = 'ffill')
     for zz in range(1,12):
         z[i][f'Shift_{zz}'] = z[i]['Last'].shift(zz)
@@ -178,8 +179,8 @@ for i in range(0,pred_periods):
         z[i][f'SMA_{mm}'] = z[i]['Last'].rolling(window=mm).mean()
         z[i][f'EMA_{mm}'] = z[i]['Last'].ewm(mm).mean()
         
-    pred_new_inputs = pred_df.iloc[-1].values
-    pred_new_inputs = pred_new_inputs.reshape(1,-1)
+    o[i] = z[i].iloc[-1].values
+    o[i] = o[i].reshape(1,-1)
     #pred_niner = np.reshape(pred_niner, (pred_niner.shape[0], 1, pred_niner.shape[1]))
     
 
