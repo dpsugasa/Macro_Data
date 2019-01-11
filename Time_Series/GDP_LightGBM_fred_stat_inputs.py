@@ -47,7 +47,7 @@ from xgboost import XGBRegressor
 from sklearn.metrics import accuracy_score
 import credentials
 
-fred = Fred(api_key=fred_api)
+fred = Fred(api_key=fred_api_key)
 
 #set script starting time
 start_time = datetime.now()

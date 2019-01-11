@@ -47,7 +47,7 @@ from xgboost import XGBRegressor
 from sklearn.metrics import accuracy_score
 import credentials
 
-fred = Fred(api_key=fred_api)
+fred = Fred(api_key=fred_api_key)
 
 #set script starting time
 start_time = datetime.now()
@@ -112,7 +112,7 @@ Create the final prediction dataframe and array of predictions
 t = {} #dict of indices
 p = {} #dict of prediction dataframes
 #final dataframe with new predictions; will be fed to the GDP model
-pred_periods = 6
+pred_periods = 1
 for y in range(0,pred_periods + 1):
     t[y] = d['UMich'].index.union(pd.date_range(d['UMich'].index[-1]+1,
                                        periods=y,
@@ -130,12 +130,13 @@ pred_array_loop = pred_array
 '''
 
 k = {} #dict of prediction dfs
-z = {} #dict of dataframes for prediction
+df = {} #dict of dataframes for prediction
 o = {} #dict of new inputs
 
 
 for i in range(0,pred_periods):
     k[i] = p[i]
+    
     k[i] = k[i].dropna()
     
     '''
@@ -166,30 +167,30 @@ for i in range(0,pred_periods):
     '''
     
     #create a dataframe that will be used for new predictions
-    z[i] = p[i]
+    df[i] = p[i]
     #pred_df = pred_df.fillna(method = 'ffill')
     for zz in range(1,12):
-        z[i][f'Shift_{zz}'] = z[i]['Last'].shift(zz)
+        df[i][f'Shift_{zz}'] = df[i]['Last'].shift(zz)
         
     for qq in range(1,13):
-        z[i][f'Diff_{qq}'] = z[i]['Last'].diff(qq)
+        df[i][f'Diff_{qq}'] = df[i]['Last'].diff(qq)
         
     #create some moving average features
     for mm in range(3,10):
-        z[i][f'SMA_{mm}'] = z[i]['Last'].rolling(window=mm).mean()
-        z[i][f'EMA_{mm}'] = z[i]['Last'].ewm(mm).mean()
+        df[i][f'SMA_{mm}'] = df[i]['Last'].rolling(window=mm).mean()
+        df[i][f'EMA_{mm}'] = df[i]['Last'].ewm(mm).mean()
         
-    o[i] = z[i].iloc[-1].values
+    o[i] = df[i].iloc[-1].values
     o[i] = o[i].reshape(1,-1)
     #pred_niner = np.reshape(pred_niner, (pred_niner.shape[0], 1, pred_niner.shape[1]))
     
 
-X, y = d['UMich'].values[:, 1:39], d['UMich']['Last'].values
-y = y.reshape(-1,1)
-scalerx = pre.MinMaxScaler(feature_range=(0,1)).fit(X)
-x_scale = scalerx.transform(X)
-scalery = pre.MinMaxScaler(feature_range=(0,1)).fit(y)
-y_scale = scalery.transform(y)
+    X, y = k[i].values[:, 1:39], k[i][:, 0].values
+    y = y.reshape(-1,1)
+    scalerx = pre.MinMaxScaler(feature_range=(0,1)).fit(X)
+    x_scale = scalerx.transform(X)
+    scalery = pre.MinMaxScaler(feature_range=(0,1)).fit(y)
+    y_scale = scalery.transform(y)
 
 train_split = int(len(d['UMich'])*0.75)
 
