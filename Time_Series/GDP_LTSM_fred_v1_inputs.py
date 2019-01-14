@@ -97,12 +97,16 @@ for code, name in indics.items():
     d[name] = fred.get_series_latest_release(code)
     d[name] = d[name].resample('M').last()
     d[name] = d[name].interpolate(method = 'linear')
+    
 
 for i in non_stat:
     d[i] =  d[i].diff(12)
     
 
-d['UMich'] = pd.DataFrame(d['UMich'], columns = ['Last'])
+#d['UMich'] = pd.DataFrame(d['UMich'], columns = ['Last'])
+#pred_array = d['UMich']['Last'].values
+#pred_series = d['UMich']['Last']
+
 
 '''
 #######################
@@ -112,129 +116,144 @@ Create the final prediction dataframe and array of predictions
 t = {} #dict of indices
 p = {} #dict of prediction dataframes
 #final dataframe with new predictions; will be fed to the GDP model
-pred_periods = 1
-for y in range(0,pred_periods + 1):
-    t[y] = d['UMich'].index.union(pd.date_range(d['UMich'].index[-1]+1,
-                                       periods=y,
-                                       freq=d['UMich'].index.freq))
-for r in range(0, pred_periods + 1):
-    p[r] = pd.DataFrame(index = t[r])
-    p[r]['Last'] = d['UMich']['Last']
+pred_periods = 6
 
-
-
-'''not sure about this
-#array to append predictions to
-pred_array = d['UMich']['Last'].values
-pred_array_loop = pred_array
-'''
-
-k = {} #dict of prediction dfs
-df = {} #dict of dataframes for prediction
-o = {} #dict of new inputs
-
-
-for i in range(0,pred_periods):
-    k[i] = p[i]
+for indic in indics.values():
     
-    k[i] = k[i].dropna()
+    pred_array = d[indic].values
+    pred_series = d[indic]
     
-    '''
-    #######################
-    Create Inputs
-    #######################
+    for y in range(0,pred_periods + 1):
+        t[indic][y] = d[indic].index.union(pd.date_range(d[indic].index[-1]+1,
+                                           periods=y,
+                                           freq = d[indic].index.freq))
+    for r in range(0, pred_periods + 1):
+        p[indic][r] = pd.DataFrame(index = t[indic][r])
+        p[indic][r] = pred_series
+    
+    
+    
+    '''not sure about this
+    #array to append predictions to
+    pred_array = d['UMich']['Last'].values
+    pred_array_loop = pred_array
     '''
     
-    # create multiple features with shifted data
-    for z in range(1,13):
-        k[i][f'Shift_{z}'] = k[i]['Last'].shift(z)
-        
-    #create multiple features with diff data; don't use Forward Information!
-    for q in range(1,13):
-        k[i][f'Diff_{q}'] = k[i]['Shift_1'].diff(q)
-        
-    #create some moving average features; don't use Forward Information!
-    for m in range(3,10):
-        k[i][f'SMA_{m}'] = k[i]['Shift_1'].rolling(window=m).mean()
-        k[i][f'EMA_{m}'] = k[i]['Shift_1'].ewm(m).mean()
-        
-    #d['UMich'] = d['UMich'].fillna(method='ffill').dropna()
-
-    '''
-    #######################
-    Create Dataframe for new predictions
-    #######################
-    '''
+    k = {} #dict of prediction dfs
+    df = {} #dict of dataframes for prediction
+    o = {} #dict of new inputs
     
-    #create a dataframe that will be used for new predictions
-    df[i] = p[i]
-    #pred_df = pred_df.fillna(method = 'ffill')
-    for zz in range(1,12):
-        df[i][f'Shift_{zz}'] = df[i]['Last'].shift(zz)
-        
-    for qq in range(1,13):
-        df[i][f'Diff_{qq}'] = df[i]['Last'].diff(qq)
-        
-    #create some moving average features
-    for mm in range(3,10):
-        df[i][f'SMA_{mm}'] = df[i]['Last'].rolling(window=mm).mean()
-        df[i][f'EMA_{mm}'] = df[i]['Last'].ewm(mm).mean()
-        
-    o[i] = df[i].iloc[-1].values
-    o[i] = o[i].reshape(1,-1)
-    #pred_niner = np.reshape(pred_niner, (pred_niner.shape[0], 1, pred_niner.shape[1]))
     
-
-    X, y = k[i].values[:, 1:39], k[i][:, 0].values
-    y = y.reshape(-1,1)
-    scalerx = pre.MinMaxScaler(feature_range=(0,1)).fit(X)
-    x_scale = scalerx.transform(X)
-    scalery = pre.MinMaxScaler(feature_range=(0,1)).fit(y)
-    y_scale = scalery.transform(y)
-
-train_split = int(len(d['UMich'])*0.75)
-
-X_train, X_test = x_scale[0:train_split], x_scale[train_split:]
-y_train, y_test = y_scale[0:train_split], y_scale[train_split:]
-
-X_train = np.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))
-X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
-
-#Create model
-model = Sequential()
-model.add(LSTM(32, input_shape = (1,38)) )#activation='relu'))
-model.add(Dense(16)) #activation='relu'#model.add(Dense(8))
-model.add(Dense(1))
-model.compile(loss='mean_squared_error', optimizer='adam')
-model.fit(X_train, y_train, epochs=1000, batch_size=20, verbose=2)
-
-#generate predictions for training
-trainPredict = scalery.inverse_transform(model.predict(X_train))
-testPredict = scalery.inverse_transform(model.predict(X_test))
-totalPredict = np.concatenate((trainPredict,testPredict), axis=0)
-
-trainScore = model.evaluate(X_train, y_train, verbose=0)
-print ('LSTM_RMSE_Train Score: %.4f' % (sqrt(trainScore)))
-testScore = model.evaluate(X_test, y_test, verbose=0)
-print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
-
-# calculate root mean squared error
-trainScore_2 = np.sqrt(mean_squared_error(d['UMich']['Last'], totalPredict))
-print('LSTM_RMSE_Full  Score: %.4f RMSE' % (trainScore_2))
-
-#Create dataframe with existing GDP and also the predicted values
-final_df = pd.DataFrame(d['UMich']['Last'])
-final_df['pred'] = totalPredict
-
-#create quick plot
-final_df.plot()
-
-new_pred = scalerx.transform(pred_new_inputs)
-new_pred = np.reshape(new_pred, (new_pred.shape[0], 1, new_pred.shape[1]))
-next_2 = scalery.inverse_transform(model.predict((new_pred)))
-print(next_2)
-np.append(pred_array, next_2)
- 
+    for i in range(0,pred_periods):
+        k[indic][i] = p[indic][i]
+        
+        k[indic][i] = k[indic][i].dropna()
+        
+        '''
+        #######################
+        Create Inputs
+        #######################
+        '''
+        
+        # create multiple features with shifted data
+        for z in range(1,13):
+            k[indic][i][f'Shift_{z}'] = k[indic][i].shift(z)
+            
+        #create multiple features with diff data; don't use Forward Information!
+        for q in range(1,13):
+            k[indic][i][f'Diff_{q}'] = k[indic][i]['Shift_1'].diff(q)
+            
+        #create some moving average features; don't use Forward Information!
+        for m in range(3,10):
+            k[indic][i][f'SMA_{m}'] = k[indic][i]['Shift_1'].rolling(window=m).mean()
+            k[indic][i][f'EMA_{m}'] = k[indic][i]['Shift_1'].ewm(m).mean()
+            
+        k[indic][indic][i] = k[i].fillna(method = 'ffill').dropna()
+        
+        '''
+        #######################
+        Create Dataframe for new predictions
+        #######################
+        '''
+        
+        #create a dataframe that will be used for new predictions
+        df[indic][i] = p[indic][i]
+        #pred_df = pred_df.fillna(method = 'ffill')
+        for zz in range(1,12):
+            df[indic][i][f'Shift_{zz}'] = df[indic][i]['Last'].shift(zz)
+            
+        for qq in range(1,13):
+            df[indic][i][f'Diff_{qq}'] = df[indic][i]['Last'].diff(qq)
+            
+        #create some moving average features
+        for mm in range(3,10):
+            df[indic][i][f'SMA_{mm}'] = df[indic][i]['Last'].rolling(window=mm).mean()
+            df[indic][i][f'EMA_{mm}'] = df[indic][i]['Last'].ewm(mm).mean()
+            
+        o[indic][i] = df[indic][i].iloc[-1].values
+        o[indic][i] = o[indic][i].reshape(1,-1)
+        #pred_niner = np.reshape(pred_niner, (pred_niner.shape[0], 1, pred_niner.shape[1]))
+        
+    
+        X, y = k[indic][i].values[:, 1:39], k[indic][i].values[:, 0]
+        y = y.reshape(-1,1)
+        scalerx = pre.MinMaxScaler(feature_range=(0,1)).fit(X)
+        x_scale = scalerx.transform(X)
+        scalery = pre.MinMaxScaler(feature_range=(0,1)).fit(y)
+        y_scale = scalery.transform(y)
+    
+        train_split = int(len(k[i])*0.75)
+    
+        X_train, X_test = x_scale[0:train_split], x_scale[train_split:]
+        y_train, y_test = y_scale[0:train_split], y_scale[train_split:]
+    
+        X_train = np.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))
+        X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
+    
+        #Create model
+        model = Sequential()
+        model.add(LSTM(32, input_shape = (1,38)) )#activation='relu'))
+        model.add(Dense(16)) #activation='relu'#model.add(Dense(8))
+        model.add(Dense(1))
+        model.compile(loss='mean_squared_error', optimizer='adam')
+        model.fit(X_train, y_train, epochs=100, batch_size=20, verbose=2)
+    
+        #generate predictions for training
+        trainPredict = scalery.inverse_transform(model.predict(X_train))
+        testPredict = scalery.inverse_transform(model.predict(X_test))
+        totalPredict = np.concatenate((trainPredict,testPredict), axis=0)
+    
+        trainScore = model.evaluate(X_train, y_train, verbose=0)
+        print ('LSTM_RMSE_Train Score: %.4f' % (sqrt(trainScore)))
+        testScore = model.evaluate(X_test, y_test, verbose=0)
+        print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
+    
+        # calculate root mean squared error
+        trainScore_2 = np.sqrt(mean_squared_error(k[i]['Last'], totalPredict))
+        print('LSTM_RMSE_Full  Score: %.4f RMSE' % (trainScore_2))
+    
+        #Create dataframe with existing GDP and also the predicted values
+        final_df = pd.DataFrame(k[indic][i]['Last'])
+        final_df['pred'] = totalPredict
+    
+        #create quick plot
+        final_df.plot()
+    
+        new_pred = scalerx.transform(o[indic][i])
+        new_pred = np.reshape(new_pred, (new_pred.shape[0], 1, new_pred.shape[1]))
+        next_2 = scalery.inverse_transform(model.predict((new_pred)))
+        print(next_2)
+        pred_array = np.append(pred_array, next_2)
+        last_index = p[indic][i+1].tail(1).index[0]
+        
+        for steps in range(i, pred_periods):
+            p[indic][steps+1].loc[last_index] = next_2.item()
+    
+    #p[i+1].loc[p[i+1].tail(1).index[0]] = next_2.item()
+    
+#    for steps in range(i, pred_periods):
+#        p[steps+1].loc[p[steps+1].tail(1).index[0]] = next_2.item()
+# 
     
     
     
