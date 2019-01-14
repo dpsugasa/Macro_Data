@@ -51,6 +51,7 @@ fred = Fred(api_key=fred_api_key)
 
 #set script starting time
 start_time = datetime.now()
+counter = 0
 
 #def multi_diff(series, num=12):
 #    for i in range(1,num):
@@ -116,7 +117,7 @@ Create the final prediction dataframe and array of predictions
 t = {} #dict of indices
 p = {} #dict of prediction dataframes
 #final dataframe with new predictions; will be fed to the GDP model
-pred_periods = 6
+pred_periods = 2
 
 for indic in indics.values():
     
@@ -124,12 +125,12 @@ for indic in indics.values():
     pred_series = d[indic]
     
     for y in range(0,pred_periods + 1):
-        t[indic][y] = d[indic].index.union(pd.date_range(d[indic].index[-1]+1,
+        t[indic, y] = d[indic].index.union(pd.date_range(d[indic].index[-1]+1,
                                            periods=y,
                                            freq = d[indic].index.freq))
     for r in range(0, pred_periods + 1):
-        p[indic][r] = pd.DataFrame(index = t[indic][r])
-        p[indic][r] = pred_series
+        p[indic, r] = pd.DataFrame(index = t[indic, r])
+        p[indic, r]['Last'] = pred_series
     
     
     
@@ -145,9 +146,9 @@ for indic in indics.values():
     
     
     for i in range(0,pred_periods):
-        k[indic][i] = p[indic][i]
+        k[indic, i] = p[indic, i]
         
-        k[indic][i] = k[indic][i].dropna()
+        k[indic, i] = k[indic, i].dropna()
         
         '''
         #######################
@@ -157,18 +158,18 @@ for indic in indics.values():
         
         # create multiple features with shifted data
         for z in range(1,13):
-            k[indic][i][f'Shift_{z}'] = k[indic][i].shift(z)
+            k[indic, i][f'Shift_{z}'] = k[indic, i]['Last'].shift(z)
             
         #create multiple features with diff data; don't use Forward Information!
         for q in range(1,13):
-            k[indic][i][f'Diff_{q}'] = k[indic][i]['Shift_1'].diff(q)
+            k[indic, i][f'Diff_{q}'] = k[indic, i]['Shift_1'].diff(q)
             
         #create some moving average features; don't use Forward Information!
         for m in range(3,10):
-            k[indic][i][f'SMA_{m}'] = k[indic][i]['Shift_1'].rolling(window=m).mean()
-            k[indic][i][f'EMA_{m}'] = k[indic][i]['Shift_1'].ewm(m).mean()
+            k[indic, i][f'SMA_{m}'] = k[indic, i]['Shift_1'].rolling(window=m).mean()
+            k[indic, i][f'EMA_{m}'] = k[indic, i]['Shift_1'].ewm(m).mean()
             
-        k[indic][indic][i] = k[i].fillna(method = 'ffill').dropna()
+        k[indic, i] = k[indic, i].fillna(method = 'ffill').dropna()
         
         '''
         #######################
@@ -177,32 +178,32 @@ for indic in indics.values():
         '''
         
         #create a dataframe that will be used for new predictions
-        df[indic][i] = p[indic][i]
+        df[indic, i] = p[indic, i]
         #pred_df = pred_df.fillna(method = 'ffill')
         for zz in range(1,12):
-            df[indic][i][f'Shift_{zz}'] = df[indic][i]['Last'].shift(zz)
+            df[indic, i][f'Shift_{zz}'] = df[indic, i]['Last'].shift(zz)
             
         for qq in range(1,13):
-            df[indic][i][f'Diff_{qq}'] = df[indic][i]['Last'].diff(qq)
+            df[indic, i][f'Diff_{qq}'] = df[indic, i]['Last'].diff(qq)
             
         #create some moving average features
         for mm in range(3,10):
-            df[indic][i][f'SMA_{mm}'] = df[indic][i]['Last'].rolling(window=mm).mean()
-            df[indic][i][f'EMA_{mm}'] = df[indic][i]['Last'].ewm(mm).mean()
+            df[indic, i][f'SMA_{mm}'] = df[indic, i]['Last'].rolling(window=mm).mean()
+            df[indic, i][f'EMA_{mm}'] = df[indic, i]['Last'].ewm(mm).mean()
             
-        o[indic][i] = df[indic][i].iloc[-1].values
-        o[indic][i] = o[indic][i].reshape(1,-1)
+        o[indic, i] = df[indic, i].iloc[-1].values
+        o[indic, i] = o[indic, i].reshape(1,-1)
         #pred_niner = np.reshape(pred_niner, (pred_niner.shape[0], 1, pred_niner.shape[1]))
         
     
-        X, y = k[indic][i].values[:, 1:39], k[indic][i].values[:, 0]
+        X, y = k[indic, i].values[:, 1:39], k[indic, i].values[:, 0]
         y = y.reshape(-1,1)
         scalerx = pre.MinMaxScaler(feature_range=(0,1)).fit(X)
         x_scale = scalerx.transform(X)
         scalery = pre.MinMaxScaler(feature_range=(0,1)).fit(y)
         y_scale = scalery.transform(y)
     
-        train_split = int(len(k[i])*0.75)
+        train_split = int(len(k[indic, i])*0.75)
     
         X_train, X_test = x_scale[0:train_split], x_scale[train_split:]
         y_train, y_test = y_scale[0:train_split], y_scale[train_split:]
@@ -229,25 +230,28 @@ for indic in indics.values():
         print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
     
         # calculate root mean squared error
-        trainScore_2 = np.sqrt(mean_squared_error(k[i]['Last'], totalPredict))
+        trainScore_2 = np.sqrt(mean_squared_error(k[indic, i]['Last'], totalPredict))
         print('LSTM_RMSE_Full  Score: %.4f RMSE' % (trainScore_2))
     
         #Create dataframe with existing GDP and also the predicted values
-        final_df = pd.DataFrame(k[indic][i]['Last'])
+        final_df = pd.DataFrame(k[indic, i]['Last'])
         final_df['pred'] = totalPredict
     
         #create quick plot
-        final_df.plot()
+        #final_df.plot()
     
-        new_pred = scalerx.transform(o[indic][i])
+        new_pred = scalerx.transform(o[indic, i])
         new_pred = np.reshape(new_pred, (new_pred.shape[0], 1, new_pred.shape[1]))
         next_2 = scalery.inverse_transform(model.predict((new_pred)))
-        print(next_2)
+        #print(next_2)
         pred_array = np.append(pred_array, next_2)
-        last_index = p[indic][i+1].tail(1).index[0]
+        last_index = p[indic, i+1].tail(1).index[0]
         
         for steps in range(i, pred_periods):
-            p[indic][steps+1].loc[last_index] = next_2.item()
+            p[indic, steps+1].loc[last_index] = next_2.item()
+            
+        counter += 1
+        print( f"Time to complete {counter}:", datetime.now() - start_time)
     
     #p[i+1].loc[p[i+1].tail(1).index[0]] = next_2.item()
     
@@ -256,7 +260,8 @@ for indic in indics.values():
 # 
     
     
-    
+print ("Time to complete:", datetime.now() - start_time)
+   
     
 '''   
 frames = [d[i] for i in indics.values()]
