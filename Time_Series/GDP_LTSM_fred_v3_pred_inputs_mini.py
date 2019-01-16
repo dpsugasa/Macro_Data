@@ -10,6 +10,7 @@ Changing the input data by using 12 month differencing
 """
 
 #import all modules
+import os
 import pandas as pd
 from pandas.tseries.offsets import *
 import numpy as np
@@ -250,14 +251,15 @@ for indic in indics.values():
         for steps in range(i, pred_periods):
             p[indic, steps+1].loc[last_index] = next_2.item()
             
+        filepath = r"C:\Users\dpsugasa\WorkFiles\Macro_Data\Time_Series\feature_data"
+        p[indic, i].to_csv(os.path.join(filepath, fr"{indic}_{i}.csv"))
+            
         counter += 1
         print( f"Time to complete {counter}:", datetime.now() - start_time)
     
-    #p[i+1].loc[p[i+1].tail(1).index[0]] = next_2.item()
-    
-#    for steps in range(i, pred_periods):
-#        p[steps+1].loc[p[steps+1].tail(1).index[0]] = next_2.item()
-# 
+    filepath = r"C:\Users\dpsugasa\WorkFiles\Macro_Data\Time_Series\feature_data"
+    p[indic, pred_periods].to_csv(os.path.join(filepath, fr"{indic}_{pred_periods}.csv"))
+
     
     
 print ("Time to complete:", datetime.now() - start_time)
