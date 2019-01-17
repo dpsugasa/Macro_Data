@@ -47,7 +47,7 @@ from xgboost import XGBRegressor
 from sklearn.metrics import accuracy_score
 import credentials
 
-fred = Fred(api_key=fred_api_key)
+fred = credentials.fred
 
 #set script starting time
 start_time = datetime.now()
@@ -481,11 +481,19 @@ y_train, y_test = y[0:train_split], y[train_split:]
 model = XGBRegressor()
 model.fit(X_train, y_train)
 # make predictions for test data
-y_pred = model.predict(X_test)
+y_pred_2 = model.predict(X_test)
 #predictions = [round(value) for value in y_pred]
 # evaluate predictions
 rmse_test = np.sqrt(mean_squared_error(y_test, y_pred))
 print('XGB_RMSE_test: %.4f' % rmse_test)
+
+next_3 = model.predict(niner)
+#niner_scale = scalerx.transform(niner)
+#niner_scale = np.reshape(niner_scale, (niner_scale.shape[0], 1, niner_scale.shape[1]))
+next_4 = gbm.predict(niner)
+
+print('XGB_next_GDP %.3f' % next_3)
+print('LightGBM_next_GDP %.3f' % next_4)
 
 
 

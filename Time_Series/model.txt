@@ -1645,7 +1645,7 @@ GDP_2=1
 parameters:
 [boosting: gbdt]
 [objective: regression]
-[metric: l2,l1]
+[metric: l1,l2]
 [tree_learner: serial]
 [device_type: cpu]
 [data: ]

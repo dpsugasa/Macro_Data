@@ -47,8 +47,8 @@ import lightgbm as lgb
 from xgboost import XGBRegressor
 from sklearn.metrics import accuracy_score
 import credentials
-
 #fred = Fred(api_key=fred_api_key)
+
 
 #set script starting time
 start_time = datetime.now()
@@ -96,6 +96,7 @@ non_stat = ['IP',
 d = {} #dict of data
 
 for code, name in indics.items():
+#    d[name] = credentials.credentials.fred.get_series_latest_release(code)
     d[name] = credentials.fred.get_series_latest_release(code)
     d[name] = d[name].resample('M').last()
     d[name] = d[name].interpolate(method = 'linear')
