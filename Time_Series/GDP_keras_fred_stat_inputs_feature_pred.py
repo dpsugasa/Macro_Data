@@ -21,7 +21,7 @@ from fbprophet.diagnostics import cross_validation, performance_metrics
 #from fredapi import Fred
 import credentials
 
-#fred = Fred(api_key=fred_api)
+fred = credentials.fred
 
 #set script starting time
 start_time = datetime.now()

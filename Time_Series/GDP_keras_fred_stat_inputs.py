@@ -40,6 +40,7 @@ import plotly.tools as tls
 import plotly.figure_factory as ff
 import credentials
 
+fred = credentials.fred
 
 indics = {'INDPRO':   'IP',               #Industrial Production
         'NETEXP':   'Exports',          #Net Exports of Goods and Services

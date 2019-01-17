@@ -23,7 +23,6 @@ from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.feature_selection import RFE
-#from sklearn.datasets import make_regression
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf
 from statsmodels.graphics.tsaplots import plot_pacf
@@ -42,7 +41,10 @@ import plotly.offline as offline
 import plotly.graph_objs as go
 import plotly.tools as tls
 import plotly.figure_factory as ff
-#from fredapi import Fred
+from fredapi import Fred
+import lightgbm as lgb
+from xgboost import XGBRegressor
+from sklearn.metrics import accuracy_score
 import credentials
 
 fred = credentials.fred
@@ -180,6 +182,9 @@ pred_df = baf2
 pred_df = pred_df.fillna(method = 'ffill')
 niner = pred_df.iloc[-1].values
 niner = niner.reshape(1,-1)
+niner_2 = pred_df.iloc[-10:].values
+
+
 
 
 #add output to dataframe
@@ -349,7 +354,6 @@ rmse_test = np.sqrt(mean_squared_error(y_test, test_pred))
 rmse_full = np.sqrt(mean_squared_error(final_df2['GDP'], final_df2['pred']))
 
 print('RF_RMSE_train: %.4f' % rmse_train)
-print('RF_RMSE_test: %.4f' % rmse_test)
 print('RF_RMSE_full: %.4f' % rmse_full)
 
 
@@ -386,15 +390,127 @@ fig = dict(data=data, layout=layout)
 py.iplot(fig, filename='Macro_Data/GDP/RFE/full-series')
 
 next_1 = rfr.predict(niner)
+next_1_5 = rfr.predict(niner_2)
 niner_scale = scalerx.transform(niner)
 niner_scale = np.reshape(niner_scale, (niner_scale.shape[0], 1, niner_scale.shape[1]))
+niner_2_scale = scalerx.transform(niner_2)
+niner_2_scale = np.reshape(niner_2_scale, (niner_2_scale.shape[0], 1, niner_2_scale.shape[1]))
 next_2 = scalery.inverse_transform(model.predict(niner_scale))
+next_2_5 = scalery.inverse_transform(model.predict(niner_2_scale))
+
+
 
 print('RF_next_GDP %.3f' % next_1)
 print('LSTM_next_GDP %.3f' % next_2)
 
+'''
+#####################
+now try LightBGM
+#####################
+'''
+
+X, y = baf2.values[:, 0:29], baf2.values[:, 29]
+
+train_split = int(len(baf2)*0.75)
+
+X_train, X_test = X[0:train_split], X[train_split:]
+y_train, y_test = y[0:train_split], y[train_split:]
+
+# create dataset for lightgbm
+lgb_train = lgb.Dataset(X_train, y_train)
+lgb_eval = lgb.Dataset(X_test, y_test, reference=lgb_train)
+
+# specify your configurations as a dict
+params = {
+    'boosting_type': 'gbdt',
+    'objective': 'regression',
+    'metric': {'l2', 'l1'},
+    'num_leaves': 31,
+    'learning_rate': 0.05,
+    'feature_fraction': 0.9,
+    'bagging_fraction': 0.8,
+    'bagging_freq': 5,
+    'verbose': 0
+}
+
+print('Starting training...')
+
+evals_result = {}
+feature_name = list(baf2.columns[0:29])
+
+# train
+gbm = lgb.train(params,
+                lgb_train,
+                num_boost_round=100,
+                valid_sets=lgb_eval,
+                feature_name = feature_name,
+                #categorical_feature=[21],
+                evals_result=evals_result,
+                verbose_eval=0)
+#               early_stopping_rounds=50)
+
+
+
+print('Saving model...')
+# save model to file
+gbm.save_model('model.txt')
+
+print('Starting predicting...')
+# predict
+#y_pred_train = gbm.predict(X_train, num_iteration=gbm.best_iteration)
+y_pred = gbm.predict(X_test, num_iteration=gbm.best_iteration)
+# eval
+print('The rmse of prediction is:', mean_squared_error(y_test, y_pred) ** 0.5)
+
+fin_df = pd.DataFrame(y_pred, columns = ['y_pred'], index = baf2.index[train_split:])
+fin_df['actual'] = baf2['GDP'][train_split:]
+
+def render_plot_importance(importance_type, max_features=10,
+                           ignore_zero=True, precision=4):
+    ax = lgb.plot_importance(gbm, importance_type=importance_type,
+                             max_num_features=max_features,
+                             ignore_zero=ignore_zero, figsize=(12, 8),
+                             precision=precision)
+    plt.show()
+    
+render_plot_importance(importance_type='split')
+
+'''
+#####################
+now try XGBoost
+#####################
+'''
+X, y = baf2.values[:, 0:29], baf2.values[:, 29]
+
+train_split = int(len(baf2)*0.75)
+
+X_train, X_test = X[0:train_split], X[train_split:]
+y_train, y_test = y[0:train_split], y[train_split:]
+
+model = XGBRegressor()
+model.fit(X_train, y_train)
+# make predictions for test data
+y_pred_2 = model.predict(X_test)
+#predictions = [round(value) for value in y_pred]
+# evaluate predictions
+rmse_test = np.sqrt(mean_squared_error(y_test, y_pred))
+print('XGB_RMSE_test: %.4f' % rmse_test)
+
+next_3 = model.predict(niner)
+next_3_5 = model.predict(niner_2)
+#niner_scale = scalerx.transform(niner)
+#niner_scale = np.reshape(niner_scale, (niner_scale.shape[0], 1, niner_scale.shape[1]))
+next_4 = gbm.predict(niner)
+next_4_5 = gbm.predict(niner_2)
+
+
+print('XGB_next_GDP %.3f' % next_3)
+print('LightGBM_next_GDP %.3f' % next_4)
+
+
 
 print ("Time to complete:", datetime.now() - start_time)
+
 
 
 

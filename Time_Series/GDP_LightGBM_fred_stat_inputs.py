@@ -182,6 +182,7 @@ pred_df = baf2
 pred_df = pred_df.fillna(method = 'ffill')
 niner = pred_df.iloc[-1].values
 niner = niner.reshape(1,-1)
+niner_2 = pred_df.iloc[-10:].values
 
 
 #add output to dataframe
@@ -387,9 +388,14 @@ fig = dict(data=data, layout=layout)
 py.iplot(fig, filename='Macro_Data/GDP/RFE/full-series')
 
 next_1 = rfr.predict(niner)
+next_1_5 = rfr.predict(niner_2)
 niner_scale = scalerx.transform(niner)
 niner_scale = np.reshape(niner_scale, (niner_scale.shape[0], 1, niner_scale.shape[1]))
+niner_2_scale = scalerx.transform(niner_2)
+niner_2_scale = np.reshape(niner_2_scale, (niner_2_scale.shape[0], 1, niner_2_scale.shape[1]))
 next_2 = scalery.inverse_transform(model.predict(niner_scale))
+next_2_5 = scalery.inverse_transform(model.predict(niner_2_scale))
+
 
 print('RF_next_GDP %.3f' % next_1)
 print('LSTM_next_GDP %.3f' % next_2)
@@ -444,7 +450,7 @@ gbm = lgb.train(params,
 
 print('Saving model...')
 # save model to file
-gbm.save_model('model.txt')
+#gbm.save_model('model.txt')
 
 print('Starting predicting...')
 # predict
@@ -488,9 +494,11 @@ rmse_test = np.sqrt(mean_squared_error(y_test, y_pred))
 print('XGB_RMSE_test: %.4f' % rmse_test)
 
 next_3 = model.predict(niner)
+next_3_5 = model.predict(niner_2)
 #niner_scale = scalerx.transform(niner)
 #niner_scale = np.reshape(niner_scale, (niner_scale.shape[0], 1, niner_scale.shape[1]))
 next_4 = gbm.predict(niner)
+next_4_5 = gbm.predict(niner_2)
 
 print('XGB_next_GDP %.3f' % next_3)
 print('LightGBM_next_GDP %.3f' % next_4)
