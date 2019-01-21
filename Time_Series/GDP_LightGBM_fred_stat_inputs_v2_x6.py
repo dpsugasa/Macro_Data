@@ -189,14 +189,29 @@ niner_2 = pred_df.iloc[-10:].values
 
 #add output to dataframe
 baf2['GDP'] = output
+baf2['GDP_t1'] = baf2['GDP'].shift(-1)
+baf2['GDP_t2'] = baf2['GDP'].shift(-2)
+baf2['GDP_t3'] = baf2['GDP'].shift(-3)
+baf2['GDP_t4'] = baf2['GDP'].shift(-4)
+baf2['GDP_t5'] = baf2['GDP'].shift(-5)
+baf2['GDP_t6'] = baf2['GDP'].shift(-6)
+
+
+#baf3 = pd.DataFrame(index = pd.date_range(baf2.index[-1]+1,
+#                                          periods = 6,
+#                                          freq = baf2.index.freq))
+#
+#baf2.append(baf3)
+
+
 baf2 = baf2.dropna()
 
 '''
 Create model
 '''
 
-X, y = baf2.values[:, 0:29], baf2.values[:, 29]
-y = y.reshape(-1,1)
+X, y = baf2.values[:, 0:29], baf2.values[:, 29:36]
+#y = y.reshape(-1,1)
 scalerx = pre.MinMaxScaler(feature_range=(0,1)).fit(X)
 x_scale = scalerx.transform(X)
 scalery = pre.MinMaxScaler(feature_range=(0,1)).fit(y)
@@ -218,7 +233,7 @@ X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
 model = Sequential()
 model.add(LSTM(64, input_shape = (1,29),activation='relu'))
 model.add(Dense(8)) #activation='relu'#model.add(Dense(8))
-model.add(Dense(1))
+model.add(Dense(7))
 model.compile(loss='mean_squared_error', optimizer='adam')
 model.fit(X_train, y_train, epochs=600, batch_size=20, verbose=2)
 
@@ -233,7 +248,9 @@ testScore = model.evaluate(X_test, y_test, verbose=0)
 print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
 
 # calculate root mean squared error
-trainScore_2 = np.sqrt(mean_squared_error(baf2['GDP'], totalPredict))
+trainScore_2 = np.sqrt(mean_squared_error(baf2[['GDP', 'GDP_t1','GDP_t2',
+                                                'GDP_t3','GDP_t4','GDP_t5',
+                                                'GDP_t5']], totalPredict))
 print('LSTM_RMSE_Full  Score: %.4f RMSE' % (trainScore_2))
 
 #Create dataframe with existing GDP and also the predicted values
