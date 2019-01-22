@@ -103,8 +103,8 @@ columns = [i for i in indics.values()]
 baf = pd.concat(frames, keys = columns, join = 'outer', axis = 1)
 baf = baf.fillna(method = 'ffill')
 
-
-start_date = '01/01/1945'
+#reading bloomberg tickers from a csv
+start_date = '01/01/1990'
 end_date = "{:%m/%d/%Y}".format(datetime.now())
 fields = ['LAST PRICE']
 path = r'C:\Users\dpsugasa\WorkFiles\Macro_Data\Time_Series\napm_tickers.csv'
@@ -112,24 +112,18 @@ path = r'C:\Users\dpsugasa\WorkFiles\Macro_Data\Time_Series\napm_tickers.csv'
 df = pd.read_csv(path)
 roger = dict(zip(df['Ticker'].values,df['Code'].values))
 
+
+baf1 = LocalTerminal.get_historical(roger.keys(), fields, start_date, end_date, period = 'DAILY',
+                                         non_trading_day_fill_option = 'ALL_CALENDAR_DAYS',
+                                         non_trading_day_fill_method = 'PREVIOUS_VALUE').as_frame()
+baf1.columns = baf1.columns.droplevel(-1)  
+baf1 = baf1.fillna(method = 'bfill')
+baf1 = baf1.resample('M').last()
+baf1 = baf1.fillna(method = 'ffill').dropna()
+
 q = {} #for bbg dicts
-for code, name in roger.items():
-    q[name] = LocalTerminal.get_historical(code, fields, start_date, end_date, period = 'DAILY',
-                                         non_trading_day_fill_option = 'ALL_CALENDAR_DAYS',
-                                         non_trading_day_fill_method = 'PREVIOUS_VALUE').as_frame()
-    
-
-
-df = LocalTerminal.get_historical(roger.keys(), fields, start_date, end_date, period = 'DAILY',
-                                         non_trading_day_fill_option = 'ALL_CALENDAR_DAYS',
-                                         non_trading_day_fill_method = 'PREVIOUS_VALUE').as_frame()
-    
-#reader = DictReader(open(r'C:\Users\dpsugasa\WorkFiles\AT1\Tearsheets\bonds.csv'))
-#for line in reader:
-#    IDs.append(line)
-
 #using BBG data
-bbg_dics = {'USTBTOT Index':   'USBTOT',            #US trade balance
+bbg_dics = {'USTBTOT Index':   'USTBTOT',            #US trade balance
         'TBEXTOT Index':   'TBEXTOT',               #US Exports Total
         'USEXREAL Index':  'USEXREAL',              #US Real Exports SA
         'TMNOCHNG Index':  'TMNOCHNG',              #US Manufacturers NO
@@ -137,59 +131,75 @@ bbg_dics = {'USTBTOT Index':   'USBTOT',            #US trade balance
         'CGNOXAY% Index':  'CGNOXAY%',              #Capital Goods New Orders Non Defense ex Air and Parts
         'DGNOYOY Index':  'DGNOYOY',                #Durable goods new orders YoY
         'TBIMTOT Index':    'TBIMTOT',              #US Trade Balance Total Balance of Payments
-        'NAPMNEWO Index':   'NAPMNEWO',             #ISM Reports on Business New Orders
-        'NAPMPMI Index': 'NAPMPMI',                 #ISM Manufacturing PMI
-        'NAPMNMI Index':  'NAPMNMI',                #ISM Non-manufacturing Index
-        'NAPMPRIC Index':  'NAPMPRIC',              #ISM Business Price Index
-        'NAPMEMPL Index': 'NAPMEMPL',               #ISM Employment
-        'NAPMALL Index': 'NAPMALL',                 #ISM Economy All
-        'FRBKCLMCIM':   'LMCI',         #KC Fed Labor Market Conditions Index, Momentum Indicator
-        'UMCSENT':      'UMich',        #University of Michigan: Consumer Sentiment
+#        'NAPMNEWO Index':   'NAPMNEWO',             #ISM Reports on Business New Orders
+#        'NAPMPMI Index': 'NAPMPMI',                 #ISM Manufacturing PMI
+#        'NAPMNMI Index':  'NAPMNMI',                #ISM Non-manufacturing Index
+#        'NAPMPRIC Index':  'NAPMPRIC',              #ISM Business Price Index
+#        'NAPMEMPL Index': 'NAPMEMPL',               #ISM Employment
+#        'NAPMALL Index': 'NAPMALL',                 #ISM Economy All
+#        'FRBKCLMCIM':   'LMCI',         #KC Fed Labor Market Conditions Index, Momentum Indicator
+#        'UMCSENT':      'UMich',        #University of Michigan: Consumer Sentiment
         }
 
-bbg_non_stat = ['USBTOT',
+bbg_non_stat = ['USTBTOT',
             'TBEXTOT',
             'USEXREAL',
             'TBIMTOT',
-            'NewOrders_NoDef',
-            'Real_PCE',
-            'Real_Imports',
-            'Imports',
-            'Wk_hrs_manu',
-            'Wk_hrs_priv',          
-            'Tot_veh_sales',
-            'Lt_wght_veh',
-            'Heavy_trucks',
+#            'NewOrders_NoDef',
+#            'Real_PCE',
+#            'Real_Imports',
+#            'Imports',
+#            'Wk_hrs_manu',
+#            'Wk_hrs_priv',          
+#            'Tot_veh_sales',
+#            'Lt_wght_veh',
+#            'Heavy_trucks',
             ]
+for code, name in bbg_dics.items():
+    q[name] = LocalTerminal.get_historical(code, fields, start_date, end_date, period = 'DAILY',
+                                         non_trading_day_fill_option = 'ALL_CALENDAR_DAYS',
+                                         non_trading_day_fill_method = 'PREVIOUS_VALUE').as_frame()
+    q[name] = q[name].resample('M').last()
+    q[name] = q[name].interpolate(method = 'linear')
 
 
+for i in bbg_non_stat:
+    q[i] =  q[i].diff(12)
+    
+frames = [q[i] for i in bbg_dics.values()]
+columns = [i for i in bbg_dics.values()]
 
-#ISM Manufacturing PMI Composite Index
-start_date = '01/01/1980'
-vendor_ticker = 'ISM/MAN_PMI'
+baf2 = pd.concat(frames, keys = columns, join = 'outer', axis = 1)
+baf2 = baf2.fillna(method = 'ffill')
 
-df = quandl.get(vendor_ticker, start_date = start_date)
-df = df.rename(columns = {'Index':'PMI'})
-df = df.resample('M').last()
+##ISM Manufacturing PMI Composite Index
+#start_date = '01/01/1980'
+#vendor_ticker = 'ISM/MAN_PMI'
+#
+#df = quandl.get(vendor_ticker, start_date = start_date)
+#df = df.rename(columns = {'Index':'PMI'})
+#df = df.resample('M').last()
+#
+##US Consumer Confidence
+#mgr = dm.BbgDataManager()
+## set dates, securities, and fields
+#start_date = '01/01/1980'
+#end_date = "{:%m/%d/%Y}".format(datetime.now())
+#IDs5 = ['CONCCONF Index']
+#sids5 = mgr[IDs5]
+#fields5 = ['LAST PRICE']
+#
+#df2 = sids5.get_historical(fields5, start_date, end_date)
+#df2.columns = df2.columns.droplevel(-1)
+##df8 = df8.resample('MS').mean() #not sure this is the best way to do this
+##d27  = df7.tshift(-1,freq='MS')
+#df2 = df2.rename(columns = {'CONCCONF Index':'Con_Conf'})
 
-#US Consumer Confidence
-mgr = dm.BbgDataManager()
-# set dates, securities, and fields
-start_date = '01/01/1980'
-end_date = "{:%m/%d/%Y}".format(datetime.now())
-IDs5 = ['CONCCONF Index']
-sids5 = mgr[IDs5]
-fields5 = ['LAST PRICE']
+frames2 = [baf, baf1, baf2]
+baf3 = pd.concat(frames2, join = 'outer', axis = 1)
+baf3 = baf3.fillna(method = 'ffill')
+baf3 = baf3.dropna()
 
-df2 = sids5.get_historical(fields5, start_date, end_date)
-df2.columns = df2.columns.droplevel(-1)
-#df8 = df8.resample('MS').mean() #not sure this is the best way to do this
-#d27  = df7.tshift(-1,freq='MS')
-df2 = df2.rename(columns = {'CONCCONF Index':'Con_Conf'})
-
-frames2 = [baf, df, df2]
-baf2 = pd.concat(frames2, join = 'outer', axis = 1)
-baf2 = baf.fillna(method = 'ffill')
 
 
 '''
@@ -224,22 +234,22 @@ gdp_diff12 = gdp_1.diff(12)
 gdp_diff2 = gdp_1.diff(2)
 
 #add GDP transforms to dataframe
-baf2['GDP_1'] = gdp_1
-baf2['GDP_2'] = gdp_2
-baf2['GDP_3'] = gdp_3
-baf2['GDP_SMA3'] = gdp_sma3
-baf2['GDP_SMA6']  = gdp_sma6
-baf2['GDP_SMA12'] = gdp_sma12
-baf2['GDP_EMA6'] = gdp_ema6
-baf2['GDP_EMA3'] = gdp_ema3
-baf2['GDP_diff3'] = gdp_diff3
-baf2['GDP_diff6'] = gdp_diff6
-baf2['GDP_diff9'] = gdp_diff9
-baf2['GDP_diff12'] = gdp_diff12
-baf2['GDP_diff2'] = gdp_diff2
+baf3['GDP_1'] = gdp_1
+baf3['GDP_2'] = gdp_2
+baf3['GDP_3'] = gdp_3
+baf3['GDP_SMA3'] = gdp_sma3
+baf3['GDP_SMA6']  = gdp_sma6
+baf3['GDP_SMA12'] = gdp_sma12
+baf3['GDP_EMA6'] = gdp_ema6
+baf3['GDP_EMA3'] = gdp_ema3
+baf3['GDP_diff3'] = gdp_diff3
+baf3['GDP_diff6'] = gdp_diff6
+baf3['GDP_diff9'] = gdp_diff9
+baf3['GDP_diff12'] = gdp_diff12
+baf3['GDP_diff2'] = gdp_diff2
 
 #create a dataframe that will be used for new predictions
-pred_df = baf2
+pred_df = baf3
 pred_df = pred_df.fillna(method = 'ffill')
 niner = pred_df.iloc[-1].values
 niner = niner.reshape(1,-1)
@@ -249,13 +259,13 @@ niner_2 = pred_df.iloc[-10:].values
 
 
 #add output to dataframe
-baf2['GDP'] = output
-baf2['GDP_t1'] = baf2['GDP'].shift(-1)
-baf2['GDP_t2'] = baf2['GDP'].shift(-2)
-baf2['GDP_t3'] = baf2['GDP'].shift(-3)
-baf2['GDP_t4'] = baf2['GDP'].shift(-4)
-baf2['GDP_t5'] = baf2['GDP'].shift(-5)
-baf2['GDP_t6'] = baf2['GDP'].shift(-6)
+baf3['GDP'] = output
+baf3['GDP_t1'] = baf3['GDP'].shift(-1)
+baf3['GDP_t2'] = baf3['GDP'].shift(-2)
+baf3['GDP_t3'] = baf3['GDP'].shift(-3)
+baf3['GDP_t4'] = baf3['GDP'].shift(-4)
+baf3['GDP_t5'] = baf3['GDP'].shift(-5)
+baf3['GDP_t6'] = baf3['GDP'].shift(-6)
 
 
 #baf3 = pd.DataFrame(index = pd.date_range(baf2.index[-1]+1,
