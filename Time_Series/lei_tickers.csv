@@ -1,0 +1,21 @@
+Ticker,Code,Desc
+LEI YOY Index,LEI YOY,Conference Board US Leading Index Ten Economic Indicators YoY
+LEI TOTL Index,LEI TOTL,Conference Board US Leading Index Ten Economic Indicators
+LEI CHNG Index,LEI CHNG,Conference Board US Leading Index MoM
+LEI 6MAN Index,LEI 6MAN,Conference Board US Leading Index 6 Month Annual Change
+LEI BP Index,LEI BP,Conference Board US Leading Index Building Permits
+LEI LCI Index,LEI LCI,Conference Board US Leading Index Leading Credit Index
+LEI WKIJ Index,LEI WKIJ,Conference Board US Leading Index Avg Weekly Initial Jobless Claims
+LEI AVGW Index,LEI AVGW,Conference Board US Leading Index Avg Workweek Production Workers Manuf Hours
+LEI DIFF Index,LEI DIFF,Conference Board US Leading Index Diffusion Index
+LEI ISM Index,LEI ISM,Conference Board US Leading Index ISM New Orders Diffusion Index
+LEI IRTE Index,LEI IRTE,Conference Board US Leading Index Interest Spread 10 year Treasury Less Fed Fu
+LEI MNO Index,LEI MNO,Conference Board US Manufacturers New Orders Nondefense Capital Good Ex Aircra
+LEI NWCN Index,LEI NWCN,Conference Board US Leading Index Manuf New Orders Consumer Goods & Materials
+LEI ACE Index,LEI ACE,Conference Board US Leading Index Average Consumer Expectation
+LEI CEXP Index,LEI CEXP,Conference Board US Leading Index of Consumer Expectations
+LEI STKP Index,LEI STKP,Conference Board US Leading Index Stock Prices 500 Common Stocks
+LEI M2 Index,LEI M2,Conference Board US Leading Index M2 Money Supply
+LEI VPFM Index,LEI VPFM,Conference Board US Leading Index Vendor Performance Deliveries Diffusion
+LEI PECO Index,LEI PECO,Conference Board US Leading Index Manuf New Orders Nondefense Capital Goods
+LEI DIF6 Index,LEI DIF6,Conference Board US Leading Index Diffusion 6 Month Span
