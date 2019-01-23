@@ -188,13 +188,13 @@ niner_2 = pred_df.iloc[-10:].values
 
 
 #add output to dataframe
-baf2['GDP'] = output
-baf2['GDP_t1'] = baf2['GDP'].shift(-1)
-baf2['GDP_t2'] = baf2['GDP'].shift(-2)
-baf2['GDP_t3'] = baf2['GDP'].shift(-3)
-baf2['GDP_t4'] = baf2['GDP'].shift(-4)
-baf2['GDP_t5'] = baf2['GDP'].shift(-5)
-baf2['GDP_t6'] = baf2['GDP'].shift(-6)
+baf2['GDP_t0'] = output
+baf2['GDP_t1'] = baf2['GDP_t0'].shift(-1)
+baf2['GDP_t2'] = baf2['GDP_t0'].shift(-2)
+baf2['GDP_t3'] = baf2['GDP_t0'].shift(-3)
+baf2['GDP_t4'] = baf2['GDP_t0'].shift(-4)
+baf2['GDP_t5'] = baf2['GDP_t0'].shift(-5)
+baf2['GDP_t6'] = baf2['GDP_t0'].shift(-6)
 
 
 #baf3 = pd.DataFrame(index = pd.date_range(baf2.index[-1]+1,
@@ -234,7 +234,7 @@ model = Sequential()
 model.add(LSTM(64, input_shape = (1,29),activation='relu'))
 model.add(Dense(8)) #activation='relu'#model.add(Dense(8))
 model.add(Dense(7))
-model.compile(loss='mean_squared_error', optimizer='adam')
+model.compile(loss='mse', optimizer='adam', metrics = ['mae'])
 model.fit(X_train, y_train, epochs=600, batch_size=20, verbose=2)
 
 #generate predictions for training
@@ -242,62 +242,70 @@ trainPredict = scalery.inverse_transform(model.predict(X_train))
 testPredict = scalery.inverse_transform(model.predict(X_test))
 totalPredict = np.concatenate((trainPredict,testPredict), axis=0)
 
-trainScore = model.evaluate(X_train, y_train, verbose=0)
+trainScore = model.evaluate(X_train, y_train, verbose=1)
 print ('LSTM_RMSE_Train Score: %.4f' % (sqrt(trainScore)))
-testScore = model.evaluate(X_test, y_test, verbose=0)
+testScore = model.evaluate(X_test, y_test, verbose=1)
 print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
 
 # calculate root mean squared error
-trainScore_2 = np.sqrt(mean_squared_error(baf2[['GDP', 'GDP_t1','GDP_t2',
+rmse_gdp_full = np.sqrt(mean_squared_error(baf2[['GDP_t0', 'GDP_t1','GDP_t2',
                                                 'GDP_t3','GDP_t4','GDP_t5',
                                                 'GDP_t6']], totalPredict))
-print('LSTM_RMSE_Full  Score: %.4f RMSE' % (trainScore_2))
+print('LSTM_RMSE_Full Score: %.4f RMSE' % (rmse_gdp_full))
 
 #Create dataframe with existing GDP and also the predicted values
-final_df = pd.DataFrame(baf2[['GDP', 'GDP_t1','GDP_t2',
+final_df = pd.DataFrame(baf2[['GDP_t0', 'GDP_t1','GDP_t2',
                                                 'GDP_t3','GDP_t4','GDP_t5',
                                                 'GDP_t6']])
     
-final_df['pred'] = totalPredict[:,0]
-for z in range(1,7):
-    final_df[f'pred_{z}'] = totalPredict[:,z] 
+for z in range(0,7):
+    final_df[f'pred_{z}'] = totalPredict[:,z]
+
+def root_mean_square_error(actual, pred):
+    score = np.sqrt(mean_squared_error(actual, pred))
+    score_df = pd.DataFrame(actual)
+    score_df['pred'] = pred
+    #score_df.plot(figsize=(10,7))
+    return score
+
+for n in range(0, 7):
+    score = root_mean_square_error(final_df[f'GDP_t{n}'], final_df[f'pred_{n}'])
+    print(f'LSTM_RMSE_Pred_{n}: %.4f RMSE' % (score))
+    final_df[[f'GDP_t{n}',f'pred_{n}']].plot(figsize = (10,7))
     
-    
-#create quick plot
-final_df.plot()
 
-#create Plotly plots
-trace1 = go.Scatter(
-                    x = final_df.index,
-                    y = final_df['GDP'].values,
-                    name = 'GDP % YoY',
-                    line = dict(
-                                color = ('#0000cc'),
-                                width = 1.5)
-                    ) 
-
-trace2 = go.Scatter(
-                        x = final_df.index,
-                        y = final_df['pred'].values,
-                        name = 'Predicted GDP',
-                        line = dict(
-                                    color = ('#ffa500'),
-                                    width = 1.5,
-                                    ),
-
-    )       
-        
-layout  = {'title' : 'GDP Prediction_LSTM',
-                   'xaxis' : {'title' : 'Date', 'type': 'date',
-                              'fixedrange': True},
-                   'yaxis' : {'title' : 'GDP % YoY',
-                              'fixedrange': True},
-
-                   }
-    
-data = [trace1, trace2]
-figure = go.Figure(data=data, layout=layout)
-py.iplot(figure, filename = 'Macro_Data/GDP/LSTM/full-series')
+##create Plotly plots
+#trace1 = go.Scatter(
+#                    x = final_df.index,
+#                    y = final_df['GDP'].values,
+#                    name = 'GDP % YoY',
+#                    line = dict(
+#                                color = ('#0000cc'),
+#                                width = 1.5)
+#                    ) 
+#
+#trace2 = go.Scatter(
+#                        x = final_df.index,
+#                        y = final_df['pred'].values,
+#                        name = 'Predicted GDP',
+#                        line = dict(
+#                                    color = ('#ffa500'),
+#                                    width = 1.5,
+#                                    ),
+#
+#    )       
+#        
+#layout  = {'title' : 'GDP Prediction_LSTM',
+#                   'xaxis' : {'title' : 'Date', 'type': 'date',
+#                              'fixedrange': True},
+#                   'yaxis' : {'title' : 'GDP % YoY',
+#                              'fixedrange': True},
+#
+#                   }
+#    
+#data = [trace1, trace2]
+#figure = go.Figure(data=data, layout=layout)
+#py.iplot(figure, filename = 'Macro_Data/GDP/LSTM/full-series')
 
 
 '''
