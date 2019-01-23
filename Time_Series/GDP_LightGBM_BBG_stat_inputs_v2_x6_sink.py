@@ -371,7 +371,7 @@ now try Random Forest
 #####################
 '''
 
-X, y = baf3.values[:, 0:191], baf2.values[:, 191:198]
+X, y = baf3.values[:, 0:191], baf3.values[:, 191:198]
 
 train_split = int(len(baf3)*0.75)
 
@@ -383,7 +383,7 @@ def Grid_Search_CV_RFR(X_train, y_train):
     reg = RandomForestRegressor()
     param_grid = { 
             "n_estimators"      : [10,25,50,100,500],
-            "max_features"      : ["auto"],
+            "max_features"      : [5, 10, 20, 50,"auto"],
             "min_samples_leaf" : [1,5,10,25,50,100]
             }
 
@@ -407,27 +407,27 @@ features = baf3.iloc[:,0:198].columns
 importances = rfr.feature_importances_
 indices = np.argsort(importances)
 
-trace = go.Bar(
-    x=features[indices],
-    y=importances[indices],
-    marker = dict(color='green')
-)
+# trace = go.Bar(
+#     x=features[indices],
+#     y=importances[indices],
+#     marker = dict(color='green')
+# )
 
-data=[trace]
+# data=[trace]
 
-# Edit the layout, then plot!
-layout = dict(title = 'GDP Feature Importance (RF)',
-              yaxis = dict(title = 'Relative Importance',
-                           showgrid = True,
-                           fixedrange = True),
-              xaxis = dict(autorange='reversed',
-                           tickfont=dict(size=10),
-                           showgrid = True,
-                           fixedrange = True)
-              )
+# # Edit the layout, then plot!
+# layout = dict(title = 'GDP Feature Importance (RF)',
+#               yaxis = dict(title = 'Relative Importance',
+#                            showgrid = True,
+#                            fixedrange = True),
+#               xaxis = dict(autorange='reversed',
+#                            tickfont=dict(size=10),
+#                            showgrid = True,
+#                            fixedrange = True)
+#               )
 
-fig = dict(data=data, layout=layout)
-py.iplot(fig, filename='Macro_Data/GDP/RFE/feature_importance')
+# fig = dict(data=data, layout=layout)
+# py.iplot(fig, filename='Macro_Data/GDP/RFE/feature_importance')
 
 #predict values
 train_pred = rfr.predict(X_train)
@@ -442,7 +442,7 @@ rmse_test = np.sqrt(mean_squared_error(y_test, test_pred))
 #rmse_full = np.sqrt(mean_squared_error(final_df2['GDP'], final_df2['pred']))
 
 print('RF_RMSE_train: %.4f' % rmse_train)
-print('RF_RMSE_full: %.4f' % rmse_full)
+#print('RF_RMSE_full: %.4f' % rmse_full)
 
 
 # Create traces.
