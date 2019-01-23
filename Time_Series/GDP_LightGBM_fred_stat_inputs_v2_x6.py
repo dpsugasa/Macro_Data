@@ -319,7 +319,7 @@ now try Random Forest
 #####################
 '''
 
-X, y = baf2.values[:, 0:29], baf2.values[:, 29]
+X, y = baf2.values[:, 0:29], baf2.values[:, 29:36]
 
 train_split = int(len(baf2)*0.75)
 
@@ -331,7 +331,7 @@ def Grid_Search_CV_RFR(X_train, y_train):
     reg = RandomForestRegressor()
     param_grid = { 
             "n_estimators"      : [10,25,50,100,500],
-            "max_features"      : ["auto"],
+            "max_features"      : [5, 10, 15, "auto"],
             "min_samples_leaf" : [1,5,10,25,50,100]
             }
 
@@ -380,17 +380,39 @@ py.iplot(fig, filename='Macro_Data/GDP/RFE/feature_importance')
 #predict values
 train_pred = rfr.predict(X_train)
 test_pred = rfr.predict(X_test)
-tot_pred = np.append(train_pred, test_pred)
+tot_pred = np.concatenate((train_pred,test_pred), axis=0)
 
-final_df2 = pd.DataFrame(baf2['GDP'])
-final_df2['pred'] = tot_pred
 
-rmse_train = np.sqrt(mean_squared_error(y_train, train_pred))
-rmse_test = np.sqrt(mean_squared_error(y_test, test_pred))
-rmse_full = np.sqrt(mean_squared_error(final_df2['GDP'], final_df2['pred']))
+#final_df2 = pd.DataFrame(baf2['GDP'])
+#final_df2['pred'] = tot_pred
 
-print('RF_RMSE_train: %.4f' % rmse_train)
-print('RF_RMSE_full: %.4f' % rmse_full)
+# calculate root mean squared error
+rmse_gdp_full_rfr = np.sqrt(mean_squared_error(baf2[['GDP_t0', 'GDP_t1','GDP_t2',
+                                                'GDP_t3','GDP_t4','GDP_t5',
+                                                'GDP_t6']], tot_pred))
+print('LSTM_RMSE_Full Score: %.4f RMSE' % (rmse_gdp_full_rfr))
+
+#Create dataframe with existing GDP and also the predicted values
+final_df_2 = pd.DataFrame(baf2[['GDP_t0', 'GDP_t1','GDP_t2',
+                                                'GDP_t3','GDP_t4','GDP_t5',
+                                                'GDP_t6']])
+    
+for z in range(0,7):
+    final_df_2[f'pred_{z}'] = tot_pred[:,z]
+
+for n in range(0, 7):
+    score_2 = mae(final_df_2[f'GDP_t{n}'], final_df_2[f'pred_{n}'])
+    mape_2 = mape_vectorized(final_df_2[f'GDP_t{n}'], final_df_2[f'pred_{n}'])
+    print(f'LSTM_MAE_Pred_{n}: %.4f MAE' % (score_2))
+    print(f'LSTM_MAPE_Pred_{n}: %.4f MAPE' % (mape_2))  
+    final_df_2[[f'GDP_t{n}',f'pred_{n}']].plot(figsize = (15,10))
+
+#rmse_train = np.sqrt(mean_squared_error(y_train, train_pred))
+#rmse_test = np.sqrt(mean_squared_error(y_test, test_pred))
+#rmse_full = np.sqrt(mean_squared_error(final_df_2['GDP'], final_df2['pred']))
+
+#print('RF_RMSE_train: %.4f' % rmse_train)
+#print('RF_RMSE_full: %.4f' % rmse_full)
 
 
 # Create traces.
