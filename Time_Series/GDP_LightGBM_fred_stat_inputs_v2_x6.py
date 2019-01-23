@@ -250,13 +250,19 @@ print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
 # calculate root mean squared error
 trainScore_2 = np.sqrt(mean_squared_error(baf2[['GDP', 'GDP_t1','GDP_t2',
                                                 'GDP_t3','GDP_t4','GDP_t5',
-                                                'GDP_t5']], totalPredict))
+                                                'GDP_t6']], totalPredict))
 print('LSTM_RMSE_Full  Score: %.4f RMSE' % (trainScore_2))
 
 #Create dataframe with existing GDP and also the predicted values
-final_df = pd.DataFrame(baf2['GDP'])
-final_df['pred'] = totalPredict
-
+final_df = pd.DataFrame(baf2[['GDP', 'GDP_t1','GDP_t2',
+                                                'GDP_t3','GDP_t4','GDP_t5',
+                                                'GDP_t6']])
+    
+final_df['pred'] = totalPredict[:,0]
+for z in range(1,7):
+    final_df[f'pred_{z}'] = totalPredict[:,z] 
+    
+    
 #create quick plot
 final_df.plot()
 
