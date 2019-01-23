@@ -275,20 +275,20 @@ baf3['GDP_t6'] = baf3['GDP'].shift(-6)
 #baf2.append(baf3)
 
 
-baf2 = baf2.dropna()
+baf3 = baf3.dropna()
 
 '''
 Create model
 '''
 
-X, y = baf2.values[:, 0:29], baf2.values[:, 29:36]
+X, y = baf3.values[:, 0:191], baf3.values[:, 191:198]
 #y = y.reshape(-1,1)
 scalerx = pre.MinMaxScaler(feature_range=(0,1)).fit(X)
 x_scale = scalerx.transform(X)
 scalery = pre.MinMaxScaler(feature_range=(0,1)).fit(y)
 y_scale = scalery.transform(y)
 
-train_split = int(len(baf2)*0.75)
+train_split = int(len(baf3)*0.75)
 
 X_train, X_test = x_scale[0:train_split], x_scale[train_split:]
 y_train, y_test = y_scale[0:train_split], y_scale[train_split:]
@@ -302,7 +302,7 @@ X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
 
 #Create model
 model = Sequential()
-model.add(LSTM(64, input_shape = (1,29),activation='relu'))
+model.add(LSTM(64, input_shape = (1,191),activation='relu'))
 model.add(Dense(8)) #activation='relu'#model.add(Dense(8))
 model.add(Dense(7))
 model.compile(loss='mean_squared_error', optimizer='adam')
@@ -319,50 +319,50 @@ testScore = model.evaluate(X_test, y_test, verbose=0)
 print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
 
 # calculate root mean squared error
-trainScore_2 = np.sqrt(mean_squared_error(baf2[['GDP', 'GDP_t1','GDP_t2',
+trainScore_2 = np.sqrt(mean_squared_error(baf3[['GDP', 'GDP_t1','GDP_t2',
                                                 'GDP_t3','GDP_t4','GDP_t5',
                                                 'GDP_t5']], totalPredict))
 print('LSTM_RMSE_Full  Score: %.4f RMSE' % (trainScore_2))
 
-#Create dataframe with existing GDP and also the predicted values
-final_df = pd.DataFrame(baf2['GDP'])
-final_df['pred'] = totalPredict
-
-#create quick plot
-final_df.plot()
-
-#create Plotly plots
-trace1 = go.Scatter(
-                    x = final_df.index,
-                    y = final_df['GDP'].values,
-                    name = 'GDP % YoY',
-                    line = dict(
-                                color = ('#0000cc'),
-                                width = 1.5)
-                    ) 
-
-trace2 = go.Scatter(
-                        x = final_df.index,
-                        y = final_df['pred'].values,
-                        name = 'Predicted GDP',
-                        line = dict(
-                                    color = ('#ffa500'),
-                                    width = 1.5,
-                                    ),
-
-    )       
-        
-layout  = {'title' : 'GDP Prediction_LSTM',
-                   'xaxis' : {'title' : 'Date', 'type': 'date',
-                              'fixedrange': True},
-                   'yaxis' : {'title' : 'GDP % YoY',
-                              'fixedrange': True},
-
-                   }
-    
-data = [trace1, trace2]
-figure = go.Figure(data=data, layout=layout)
-py.iplot(figure, filename = 'Macro_Data/GDP/LSTM/full-series')
+##Create dataframe with existing GDP and also the predicted values
+#final_df = pd.DataFrame(baf3['GDP'])
+#final_df['pred'] = totalPredict
+#
+##create quick plot
+#final_df.plot()
+#
+##create Plotly plots
+#trace1 = go.Scatter(
+#                    x = final_df.index,
+#                    y = final_df['GDP'].values,
+#                    name = 'GDP % YoY',
+#                    line = dict(
+#                                color = ('#0000cc'),
+#                                width = 1.5)
+#                    ) 
+#
+#trace2 = go.Scatter(
+#                        x = final_df.index,
+#                        y = final_df['pred'].values,
+#                        name = 'Predicted GDP',
+#                        line = dict(
+#                                    color = ('#ffa500'),
+#                                    width = 1.5,
+#                                    ),
+#
+#    )       
+#        
+#layout  = {'title' : 'GDP Prediction_LSTM',
+#                   'xaxis' : {'title' : 'Date', 'type': 'date',
+#                              'fixedrange': True},
+#                   'yaxis' : {'title' : 'GDP % YoY',
+#                              'fixedrange': True},
+#
+#                   }
+#    
+#data = [trace1, trace2]
+#figure = go.Figure(data=data, layout=layout)
+#py.iplot(figure, filename = 'Macro_Data/GDP/LSTM/full-series')
 
 
 '''
@@ -371,9 +371,9 @@ now try Random Forest
 #####################
 '''
 
-X, y = baf2.values[:, 0:29], baf2.values[:, 29]
+X, y = baf3.values[:, 0:191], baf2.values[:, 191:198]
 
-train_split = int(len(baf2)*0.75)
+train_split = int(len(baf3)*0.75)
 
 X_train, X_test = X[0:train_split], X[train_split:]
 y_train, y_test = y[0:train_split], y[train_split:]
@@ -403,7 +403,7 @@ ne = best_params['n_estimators']
 rfr = RandomForestRegressor(n_estimators=ne, max_features=mf, min_samples_leaf=msl, random_state=1)
 rfr.fit(X_train, y_train)
 
-features = baf2.iloc[:,0:29].columns
+features = baf3.iloc[:,0:198].columns
 importances = rfr.feature_importances_
 indices = np.argsort(importances)
 
@@ -434,12 +434,12 @@ train_pred = rfr.predict(X_train)
 test_pred = rfr.predict(X_test)
 tot_pred = np.append(train_pred, test_pred)
 
-final_df2 = pd.DataFrame(baf2['GDP'])
-final_df2['pred'] = tot_pred
+#final_df2 = pd.DataFrame(baf2['GDP'])
+#final_df2['pred'] = tot_pred
 
 rmse_train = np.sqrt(mean_squared_error(y_train, train_pred))
 rmse_test = np.sqrt(mean_squared_error(y_test, test_pred))
-rmse_full = np.sqrt(mean_squared_error(final_df2['GDP'], final_df2['pred']))
+#rmse_full = np.sqrt(mean_squared_error(final_df2['GDP'], final_df2['pred']))
 
 print('RF_RMSE_train: %.4f' % rmse_train)
 print('RF_RMSE_full: %.4f' % rmse_full)
@@ -460,22 +460,22 @@ def create_trace(df, color, label):
     return trace
 
 
-#plot model performance
-pred_trace = create_trace(final_df2['pred'], '#ffa500', 'Predicted_GDP')
-act_trace = create_trace(final_df2['GDP'], '#0000cc', 'GDP % YoY')
-data = [pred_trace, act_trace]
-
-# Edit the layout, then plot!
-layout = dict(title = 'GDP Prediction_RF',
-              xaxis = dict(title = 'Date',
-                           fixedrange=True),
-              yaxis = dict(title = 'Last',
-                           fixedrange=True),
-              )
-
-fig = dict(data=data, layout=layout)
-
-py.iplot(fig, filename='Macro_Data/GDP/RFE/full-series')
+##plot model performance
+#pred_trace = create_trace(final_df2['pred'], '#ffa500', 'Predicted_GDP')
+#act_trace = create_trace(final_df2['GDP'], '#0000cc', 'GDP % YoY')
+#data = [pred_trace, act_trace]
+#
+## Edit the layout, then plot!
+#layout = dict(title = 'GDP Prediction_RF',
+#              xaxis = dict(title = 'Date',
+#                           fixedrange=True),
+#              yaxis = dict(title = 'Last',
+#                           fixedrange=True),
+#              )
+#
+#fig = dict(data=data, layout=layout)
+#
+#py.iplot(fig, filename='Macro_Data/GDP/RFE/full-series')
 
 next_1 = rfr.predict(niner)
 next_1_5 = rfr.predict(niner_2)
@@ -497,9 +497,9 @@ now try LightBGM
 #####################
 '''
 
-X, y = baf2.values[:, 0:29], baf2.values[:, 29]
+X, y = baf3.values[:, 0:191], baf2.values[:, 191:198]
 
-train_split = int(len(baf2)*0.75)
+train_split = int(len(baf3)*0.75)
 
 X_train, X_test = X[0:train_split], X[train_split:]
 y_train, y_test = y[0:train_split], y[train_split:]
@@ -524,7 +524,7 @@ params = {
 print('Starting training...')
 
 evals_result = {}
-feature_name = list(baf2.columns[0:29])
+feature_name = list(baf3.columns[0:191])
 
 # train
 gbm = lgb.train(params,
@@ -550,8 +550,8 @@ y_pred = gbm.predict(X_test, num_iteration=gbm.best_iteration)
 # eval
 print('The rmse of prediction is:', mean_squared_error(y_test, y_pred) ** 0.5)
 
-fin_df = pd.DataFrame(y_pred, columns = ['y_pred'], index = baf2.index[train_split:])
-fin_df['actual'] = baf2['GDP'][train_split:]
+#fin_df = pd.DataFrame(y_pred, columns = ['y_pred'], index = baf2.index[train_split:])
+#fin_df['actual'] = baf2['GDP'][train_split:]
 
 def render_plot_importance(importance_type, max_features=10,
                            ignore_zero=True, precision=4):
@@ -568,9 +568,9 @@ render_plot_importance(importance_type='split')
 now try XGBoost
 #####################
 '''
-X, y = baf2.values[:, 0:29], baf2.values[:, 29]
+X, y = baf3.values[:, 0:191], baf2.values[:, 191:198]
 
-train_split = int(len(baf2)*0.75)
+train_split = int(len(baf3)*0.75)
 
 X_train, X_test = X[0:train_split], X[train_split:]
 y_train, y_test = y[0:train_split], y[train_split:]
