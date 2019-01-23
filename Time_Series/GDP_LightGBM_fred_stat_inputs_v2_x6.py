@@ -14,7 +14,7 @@ import pandas as pd
 from pandas.tseries.offsets import *
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn import preprocessing as pre
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
@@ -224,6 +224,7 @@ y_train, y_test = y_scale[0:train_split], y_scale[train_split:]
 
 X_train = np.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))
 X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
+X_full = np.reshape(x_scale, (x_scale.shape[0], 1, x_scale.shape[1]))
 
 #y_train = np.reshape(y_train, (y_train.shape[0], 1, 1))
 #y_test = np.reshape(y_test, (y_test.shape[0], 1, 1))
@@ -231,21 +232,23 @@ X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
 
 #Create model
 model = Sequential()
-model.add(LSTM(64, input_shape = (1,29),activation='relu'))
-model.add(Dense(8)) #activation='relu'#model.add(Dense(8))
+model.add(LSTM(128, input_shape = (1,29),activation='relu'))
+model.add(Dense(64)) #activation='relu'#model.add(Dense(8))
 model.add(Dense(7))
 model.compile(loss='mse', optimizer='adam', metrics = ['mae'])
-model.fit(X_train, y_train, epochs=600, batch_size=20, verbose=2)
+model.fit(X_train, y_train, epochs=1000, batch_size=10, verbose=2)
 
 #generate predictions for training
 trainPredict = scalery.inverse_transform(model.predict(X_train))
 testPredict = scalery.inverse_transform(model.predict(X_test))
 totalPredict = np.concatenate((trainPredict,testPredict), axis=0)
 
-trainScore = model.evaluate(X_train, y_train, verbose=1)
-print ('LSTM_RMSE_Train Score: %.4f' % (sqrt(trainScore)))
-testScore = model.evaluate(X_test, y_test, verbose=1)
-print ('LSTM_RMSE_Test Score: %.4f' % (sqrt(testScore)))
+trainScore = model.evaluate(X_train, y_train, verbose=0)
+print ('LSTM_MAE_Train Score: %.4f MAE' % ((trainScore[1])))
+testScore = model.evaluate(X_test, y_test, verbose=0)
+print ('LSTM_MAE_Test Score: %.4f MAE' % ((testScore[1])))
+fullScore = model.evaluate(X_full, y_scale, verbose=0)
+print ('LSTM_MAE_Full Score: %.4f MAE' % ((fullScore[1])))
 
 # calculate root mean squared error
 rmse_gdp_full = np.sqrt(mean_squared_error(baf2[['GDP_t0', 'GDP_t1','GDP_t2',
@@ -261,17 +264,19 @@ final_df = pd.DataFrame(baf2[['GDP_t0', 'GDP_t1','GDP_t2',
 for z in range(0,7):
     final_df[f'pred_{z}'] = totalPredict[:,z]
 
-def root_mean_square_error(actual, pred):
-    score = np.sqrt(mean_squared_error(actual, pred))
-    score_df = pd.DataFrame(actual)
-    score_df['pred'] = pred
-    #score_df.plot(figsize=(10,7))
-    return score
+def mae(actual, pred):
+    return mean_absolute_error(actual, pred)
+
+def mape_vectorized(actual, pred):
+    mask = actual != 0
+    return (np.fabs(actual-pred)/actual)[mask].mean()
 
 for n in range(0, 7):
-    score = root_mean_square_error(final_df[f'GDP_t{n}'], final_df[f'pred_{n}'])
-    print(f'LSTM_RMSE_Pred_{n}: %.4f RMSE' % (score))
-    final_df[[f'GDP_t{n}',f'pred_{n}']].plot(figsize = (10,7))
+    score = mae(final_df[f'GDP_t{n}'], final_df[f'pred_{n}'])
+    mape = mape_vectorized(final_df[f'GDP_t{n}'], final_df[f'pred_{n}'])
+    print(f'LSTM_MAE_Pred_{n}: %.4f MAE' % (score))
+    print(f'LSTM_MAPE_Pred_{n}: %.4f MAPE' % (mape))  
+    final_df[[f'GDP_t{n}',f'pred_{n}']].plot(figsize = (15,10))
     
 
 ##create Plotly plots
