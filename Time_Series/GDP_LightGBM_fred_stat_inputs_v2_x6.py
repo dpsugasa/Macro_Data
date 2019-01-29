@@ -416,36 +416,36 @@ for n in range(0, 7):
 
 
 # Create traces.
-def create_trace(df, color, label):
-    dates = df.index 
-    prices = df.values
-
-    trace = go.Scatter(
-        x = dates,
-        y = prices,
-        name = label,
-        line = dict(color=color,
-                    width=1.5)
-    )
-    return trace
-
-
-#plot model performance
-pred_trace = create_trace(final_df2['pred'], '#ffa500', 'Predicted_GDP')
-act_trace = create_trace(final_df2['GDP'], '#0000cc', 'GDP % YoY')
-data = [pred_trace, act_trace]
-
-# Edit the layout, then plot!
-layout = dict(title = 'GDP Prediction_RF',
-              xaxis = dict(title = 'Date',
-                           fixedrange=True),
-              yaxis = dict(title = 'Last',
-                           fixedrange=True),
-              )
-
-fig = dict(data=data, layout=layout)
-
-py.iplot(fig, filename='Macro_Data/GDP/RFE/full-series')
+#def create_trace(df, color, label):
+#    dates = df.index 
+#    prices = df.values
+#
+#    trace = go.Scatter(
+#        x = dates,
+#        y = prices,
+#        name = label,
+#        line = dict(color=color,
+#                    width=1.5)
+#    )
+#    return trace
+#
+#
+##plot model performance
+#pred_trace = create_trace(final_df2['pred'], '#ffa500', 'Predicted_GDP')
+#act_trace = create_trace(final_df2['GDP'], '#0000cc', 'GDP % YoY')
+#data = [pred_trace, act_trace]
+#
+## Edit the layout, then plot!
+#layout = dict(title = 'GDP Prediction_RF',
+#              xaxis = dict(title = 'Date',
+#                           fixedrange=True),
+#              yaxis = dict(title = 'Last',
+#                           fixedrange=True),
+#              )
+#
+#fig = dict(data=data, layout=layout)
+#
+#py.iplot(fig, filename='Macro_Data/GDP/RFE/full-series')
 
 next_1 = rfr.predict(niner)
 next_1_5 = rfr.predict(niner_2)
@@ -467,7 +467,8 @@ now try LightBGM
 #####################
 '''
 
-X, y = baf2.values[:, 0:29], baf2.values[:, 29]
+X, y = baf2.values[:, 0:29], baf2.values[:, 29:36]
+y_ravel = y.ravel()
 
 train_split = int(len(baf2)*0.75)
 
@@ -482,8 +483,8 @@ lgb_eval = lgb.Dataset(X_test, y_test, reference=lgb_train)
 params = {
     'boosting_type': 'gbdt',
     'objective': 'regression',
-    'metric': {'l2', 'l1'},
-    'num_leaves': 31,
+    'metric': 'mae',
+    'num_leaves': 10,
     'learning_rate': 0.05,
     'feature_fraction': 0.9,
     'bagging_fraction': 0.8,
@@ -538,7 +539,7 @@ render_plot_importance(importance_type='split')
 now try XGBoost
 #####################
 '''
-X, y = baf2.values[:, 0:29], baf2.values[:, 29]
+X, y = baf2.values[:, 0:29], baf2.values[:, 29:36]
 
 train_split = int(len(baf2)*0.75)
 
@@ -551,8 +552,8 @@ model.fit(X_train, y_train)
 y_pred_2 = model.predict(X_test)
 #predictions = [round(value) for value in y_pred]
 # evaluate predictions
-rmse_test = np.sqrt(mean_squared_error(y_test, y_pred))
-print('XGB_RMSE_test: %.4f' % rmse_test)
+#rmse_test = np.sqrt(mean_squared_error(y_test, y_pred))
+#print('XGB_RMSE_test: %.4f' % rmse_test)
 
 next_3 = model.predict(niner)
 next_3_5 = model.predict(niner_2)
