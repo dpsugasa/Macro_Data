@@ -39,7 +39,8 @@ df = LocalTerminal.get_historical(IDs, fields, start_date, end_date).as_frame() 
                                          #non_trading_day_fill_option = 'ALL_CALENDAR_DAYS',
                                          #non_trading_day_fill_method = 'PREVIOUS_VALUE').as_frame()
 df.columns = df.columns.droplevel(-1)
-df = df.interpolate()
+df = df.resample('Q').mean()
+df = df.dropna()
 
 df['gdp_ror'] = df['GDP CYOY Index'].pct_change()
 df['cpi_ror'] = df['CPI YOY Index'].pct_change()
@@ -53,10 +54,9 @@ df['cpi_dir'] = df.apply(lambda x: 1 if x['cpi_ror'] > 0 else(-1 if \
                               x['cpi_ror'] < 0 else 0), axis = 1)
 df['cpi_dir'] = df['cpi_dir'].replace(to_replace = 0, method = 'ffill')
 
-df = df.dropna()
 
-df['regime'] = df.apply(lambda x: 1 if x['gdp_dir'] == 1 and x['cpi_dir'] == 1 else \
-                                  (2 if x['gdp_dir'] == 1 and x['cpi_dir'] == -1 else \
+df['regime'] = df.apply(lambda x: 2 if x['gdp_dir'] == 1 and x['cpi_dir'] == 1 else \
+                                  (1 if x['gdp_dir'] == 1 and x['cpi_dir'] == -1 else \
                                    (3 if x['gdp_dir'] == -1 and x['cpi_dir'] == 1 else 4)), axis = 1)
 
 

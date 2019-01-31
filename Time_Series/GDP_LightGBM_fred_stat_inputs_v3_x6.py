@@ -251,18 +251,18 @@ fullScore = model.evaluate(X_full, y_scale, verbose=0)
 print ('LSTM_MAE_Full Score: %.4f MAE' % ((fullScore[1])))
 
 # calculate root mean squared error
-rmse_gdp_full = np.sqrt(mean_squared_error(baf2[['GDP_t0', 'GDP_t1','GDP_t2',
+rmse_gdp_full = np.sqrt(mean_squared_error(baf2[['GDP_t1','GDP_t2',
                                                 'GDP_t3','GDP_t4','GDP_t5',
                                                 'GDP_t6']], totalPredict))
 print('LSTM_RMSE_Full Score: %.4f RMSE' % (rmse_gdp_full))
 
 #Create dataframe with existing GDP and also the predicted values
-final_df = pd.DataFrame(baf2[['GDP_t0', 'GDP_t1','GDP_t2',
+final_df = pd.DataFrame(baf2[['GDP_t1','GDP_t2',
                                                 'GDP_t3','GDP_t4','GDP_t5',
                                                 'GDP_t6']])
     
-for z in range(0,7):
-    final_df[f'pred_{z}'] = totalPredict[:,z]
+for z in range(0,6):
+    final_df[f'pred_{z+1}'] = totalPredict[:,z]
 
 def mae(actual, pred):
     return mean_absolute_error(actual, pred)
@@ -271,12 +271,12 @@ def mape_vectorized(actual, pred):
     mask = actual != 0
     return (np.fabs(actual-pred)/actual)[mask].mean()
 
-for n in range(0, 7):
-    score = mae(final_df[f'GDP_t{n}'], final_df[f'pred_{n}'])
-    mape = mape_vectorized(final_df[f'GDP_t{n}'], final_df[f'pred_{n}'])
-    print(f'LSTM_MAE_Pred_{n}: %.4f MAE' % (score))
-    print(f'LSTM_MAPE_Pred_{n}: %.4f MAPE' % (mape))  
-    final_df[[f'GDP_t{n}',f'pred_{n}']].plot(figsize = (15,10))
+for n in range(0, 6):
+    score = mae(final_df[f'GDP_t{n+1}'], final_df[f'pred_{n+1}'])
+    mape = mape_vectorized(final_df[f'GDP_t{n+1}'], final_df[f'pred_{n+1}'])
+    print(f'LSTM_MAE_Pred_{n+1}: %.4f MAE' % (score))
+    print(f'LSTM_MAPE_Pred_{n+1}: %.4f MAPE' % (mape))  
+    final_df[[f'GDP_t{n+1}',f'pred_{n+1}']].plot(figsize = (15,10))
     
 
 ##create Plotly plots
