@@ -155,7 +155,7 @@ figure = go.Figure(data=data, layout=layout)
 py.iplot(figure, filename = f'Growth Direction')
 
 
-start_date = '01/01/2000'
+start_date = '01/01/1995'
 end_date = "{:%m/%d/%Y}".format(datetime.now())
 IDs = ['HYG US Equity', 'NDX Index', 'SPX Index'] #'SPXT Index']
 fields = ['LAST PRICE']
@@ -163,13 +163,16 @@ fields = ['LAST PRICE']
 df_eq = LocalTerminal.get_historical(IDs, fields, start_date, end_date).as_frame()
 df_eq.columns = df_eq.columns.droplevel(-1)   
 df_eq = df_eq.fillna(method = 'ffill') #.resample('M').last()
-df_eq = df_eq.pct_change()            
+df_eq = df_eq.pct_change() 
+df_eq = df_eq.resample('Q').sum()           
 
 frames = [df_eq, df]
 baf = pd.concat(frames, join='outer', axis =1)
-baf = baf.fillna(method = 'ffill')      
+#baf = baf.fillna(method = 'ffill')   #removes last quarter; also discover if changes in prolonged periods or good markets precipitate higher vol
 
-q4 = baf['HYG US Equity'][(baf['regime'] == 4)].dropna()
+baf = baf.dropna()   
+
+q4 = baf['HYG US Equity'][(baf['regime'] == 4)].dropna() #i think this is using the returns of zero
 print(q4.mean())
 print(q4.std())
 
