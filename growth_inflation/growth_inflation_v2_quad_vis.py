@@ -32,7 +32,7 @@ date_now =  "{:%m_%d_%Y}".format(datetime.now())
 
 start_date = '01/01/1950'
 end_date = "{:%m/%d/%Y}".format(datetime.now())
-IDs = ['GDP CYOY Index', 'CPI YOY Index'] #'SPXT Index']
+IDs = ['GDP CYOY Index', 'CPI YOY Index'] 
 fields = ['LAST PRICE']
 
 df = LocalTerminal.get_historical(IDs, fields, start_date, end_date).as_frame() #period = 'QUARTERLY',
@@ -54,13 +54,24 @@ df['cpi_dir'] = df.apply(lambda x: 1 if x['cpi_ror'] > 0 else(-1 if \
                               x['cpi_ror'] < 0 else 0), axis = 1)
 df['cpi_dir'] = df['cpi_dir'].replace(to_replace = 0, method = 'ffill')
 
+df['consec_gro'] = df['gdp_dir'] * (df['gdp_dir'].groupby((df['gdp_dir'] != df['gdp_dir'].shift()).cumsum()).cumcount()+1)
+df['dir_change'] = df['gdp_dir'] != df['gdp_dir'].shift()
+df['vol_watch'] = np.where(df['consec_gro'].shift() > 2 , 1,0)
+df['danger'] = df.apply(lambda x: 1 if x['vol_watch'] ==1 and x['dir_change'] == True else 0, axis =1)
+#df['vol_watch'] = df.apply(lambda x: 1 if x['consec_gro'].shift() > 3 and x['dir_change'] == True else 0, axis =1)
 
 df['regime'] = df.apply(lambda x: 2 if x['gdp_dir'] == 1 and x['cpi_dir'] == 1 else \
                                   (1 if x['gdp_dir'] == 1 and x['cpi_dir'] == -1 else \
                                    (3 if x['gdp_dir'] == -1 and x['cpi_dir'] == 1 else 4)), axis = 1)
 
+df['vis'] = df.apply(lambda x: 2 if x['gdp_dir'] == 1 and x['cpi_dir'] == 1 else \
+                                  (1 if x['gdp_dir'] == 1 and x['cpi_dir'] == -1 else \
+                                   (-1 if x['gdp_dir'] == -1 and x['cpi_dir'] == 1 else -2)), axis = 1)
 
 
+
+
+'''
 #df['eq_direction']  = df.apply(lambda x: 1 if x['SPXT Index'] > 0 else(-1 if \
 #                              x['SPXT Index'] < 0 else 0), axis = 1)
 #
@@ -73,17 +84,17 @@ df['regime'] = df.apply(lambda x: 2 if x['gdp_dir'] == 1 and x['cpi_dir'] == 1 e
 ##df['direction'] = df['gdp_direction'] + df['cpi_direction']
 
 
-trace = go.Scatter(
-                        x = df['cpi_dir'].values,
-                        y = df['gdp_dir'].values,
-                        name = 'GDP',
-                        mode='markers',
-                        marker=dict(
-                                    size=10,
-                                    color = list(range(1,len(df['gdp_dir'].values))), #set color equal to a variable
-                                    colorscale='Viridis',
-                                    showscale=True
-    )
+trace = go.Bar(
+                        x = df['gdp_dir'][-80:].index,
+                        y = df['gdp_dir'][-80:].values,
+                        name = 'Regime',
+#                        mode='markers',
+#                        marker=dict(
+#                                    size=10,
+#                                    color = list(range(1,len(df['gdp_dir'].values))), #set color equal to a variable
+#                                    colorscale='Viridis',
+#                                    showscale=True
+#    )
 )
                         
 
@@ -132,9 +143,9 @@ trace = go.Scatter(
 #        )
         
 layout  = {'title' : f'4 Regime',
-                   'xaxis' : {'title' : 'Direction', #'type': 'date',
+                   'xaxis' : {'title' : 'Date', #'type': 'date',
                               'fixedrange': True},
-                   'yaxis' : {'title' : 'Direction', 'fixedrange': True},
+                   'yaxis' : {'title' : 'Regime', 'fixedrange': True},
                    
 #                   'shapes': [{'type': 'rect',
 #                              'x0': r[i]['scr_1y'].index[0],
@@ -150,14 +161,14 @@ layout  = {'title' : f'4 Regime',
 #                                      },]
                    }
     
-data = [trace, trace1]
+data = [trace]
 figure = go.Figure(data=data, layout=layout)
-py.iplot(figure, filename = f'Growth Direction')
+py.iplot(figure, filename = f'Regime')
 
 
-start_date = '01/01/1980'
+start_date = '01/01/1995'
 end_date = "{:%m/%d/%Y}".format(datetime.now())
-IDs = ['RTY Index', 'INDU Index', 'SPX Index'] #'SPXT Index']
+IDs = ['HYG US Equity', 'NDX Index', 'SPX Index'] #'SPXT Index']
 fields = ['LAST PRICE']
 
 df_eq = LocalTerminal.get_historical(IDs, fields, start_date, end_date).as_frame()
@@ -172,35 +183,35 @@ baf = pd.concat(frames, join='outer', axis =1)
 
 baf = baf.dropna()   
 
-q4 = baf['RTY Index'][(baf['regime'] == 4)].dropna() #i think this is using the returns of zero
+q4 = baf['HYG US Equity'][(baf['regime'] == 4)].dropna() #i think this is using the returns of zero
 print(q4.mean())
 print(q4.std())
 
-q1 = baf['RTY Index'][(baf['regime'] == 1)].dropna()
+q1 = baf['HYG US Equity'][(baf['regime'] == 1)].dropna()
 print(q1.mean())
 print(q1.std())
 
-q3 = baf['RTY Index'][(baf['regime'] == 3)].dropna()
+q3 = baf['HYG US Equity'][(baf['regime'] == 3)].dropna()
 print(q3.mean())
 print(q3.std())
 
-q2 = baf['RTY Index'][(baf['regime'] == 2)].dropna()
+q2 = baf['HYG US Equity'][(baf['regime'] == 2)].dropna()
 print(q2.mean())
 print(q2.std())
 
-q_4 = baf['INDU Index'][(baf['regime'] == 4)].dropna()
+q_4 = baf['NDX Index'][(baf['regime'] == 4)].dropna()
 print(q_4.mean())
 print(q_4.std())
 
-q_1 = baf['INDU Index'][(baf['regime'] == 1)].dropna()
+q_1 = baf['NDX Index'][(baf['regime'] == 1)].dropna()
 print(q_1.mean())
 print(q_1.std())
 
-q_3 = baf['INDU Index'][(baf['regime'] == 3)].dropna()
+q_3 = baf['NDX Index'][(baf['regime'] == 3)].dropna()
 print(q_3.mean())
 print(q_3.std())
 
-q_2 = baf['INDU Index'][(baf['regime'] == 2)].dropna()
+q_2 = baf['NDX Index'][(baf['regime'] == 2)].dropna()
 print(q_2.mean())
 print(q_2.std())
 
@@ -227,3 +238,4 @@ print(q_2_spx.std())
 
 
 #d_fx.columns = d_fx.columns.droplevel(-1)
+'''

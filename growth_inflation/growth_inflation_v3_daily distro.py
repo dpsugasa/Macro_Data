@@ -59,6 +59,12 @@ df['regime'] = df.apply(lambda x: 2 if x['gdp_dir'] == 1 and x['cpi_dir'] == 1 e
                                   (1 if x['gdp_dir'] == 1 and x['cpi_dir'] == -1 else \
                                    (3 if x['gdp_dir'] == -1 and x['cpi_dir'] == 1 else 4)), axis = 1)
 
+df['vis'] = df.apply(lambda x: 2 if x['gdp_dir'] == 1 and x['cpi_dir'] == 1 else \
+                                  (1 if x['gdp_dir'] == 1 and x['cpi_dir'] == -1 else \
+                                   (-1 if x['gdp_dir'] == -1 and x['cpi_dir'] == 1 else -2)), axis = 1)
+
+
+
 
 
 #df['eq_direction']  = df.apply(lambda x: 1 if x['SPXT Index'] > 0 else(-1 if \
@@ -73,17 +79,17 @@ df['regime'] = df.apply(lambda x: 2 if x['gdp_dir'] == 1 and x['cpi_dir'] == 1 e
 ##df['direction'] = df['gdp_direction'] + df['cpi_direction']
 
 
-trace = go.Scatter(
-                        x = df['cpi_dir'].values,
-                        y = df['gdp_dir'].values,
-                        name = 'GDP',
-                        mode='markers',
-                        marker=dict(
-                                    size=10,
-                                    color = list(range(1,len(df['gdp_dir'].values))), #set color equal to a variable
-                                    colorscale='Viridis',
-                                    showscale=True
-    )
+trace = go.Bar(
+                        x = df['gdp_dir'][-80:].index,
+                        y = df['gdp_dir'][-80:].values,
+                        name = 'Regime',
+#                        mode='markers',
+#                        marker=dict(
+#                                    size=10,
+#                                    color = list(range(1,len(df['gdp_dir'].values))), #set color equal to a variable
+#                                    colorscale='Viridis',
+#                                    showscale=True
+#    )
 )
                         
 
@@ -132,9 +138,9 @@ trace = go.Scatter(
 #        )
         
 layout  = {'title' : f'4 Regime',
-                   'xaxis' : {'title' : 'Direction', #'type': 'date',
+                   'xaxis' : {'title' : 'Date', #'type': 'date',
                               'fixedrange': True},
-                   'yaxis' : {'title' : 'Direction', 'fixedrange': True},
+                   'yaxis' : {'title' : 'Regime', 'fixedrange': True},
                    
 #                   'shapes': [{'type': 'rect',
 #                              'x0': r[i]['scr_1y'].index[0],
@@ -150,75 +156,94 @@ layout  = {'title' : f'4 Regime',
 #                                      },]
                    }
     
-data = [trace, trace1]
+data = [trace]
 figure = go.Figure(data=data, layout=layout)
-py.iplot(figure, filename = f'Growth Direction')
+py.iplot(figure, filename = f'Regime')
 
 
-start_date = '01/01/1980'
+start_date = '01/01/1995'
 end_date = "{:%m/%d/%Y}".format(datetime.now())
-IDs = ['RTY Index', 'INDU Index', 'SPX Index'] #'SPXT Index']
+IDs = ['M1WOMOM Index','NDX Index', 'SPX Index'] #'SPXT Index']
 fields = ['LAST PRICE']
 
 df_eq = LocalTerminal.get_historical(IDs, fields, start_date, end_date).as_frame()
 df_eq.columns = df_eq.columns.droplevel(-1)   
 df_eq = df_eq.fillna(method = 'ffill') #.resample('M').last()
 df_eq = df_eq.pct_change() 
-df_eq = df_eq.resample('Q').sum()           
+#df_eq = df_eq.resample('Q').sum()           
 
 frames = [df_eq, df]
 baf = pd.concat(frames, join='outer', axis =1)
-#baf = baf.fillna(method = 'ffill')   #removes last quarter; also discover if changes in prolonged periods or good markets precipitate higher vol
+baf = baf.fillna(method = 'ffill')   #removes last quarter; also discover if changes in prolonged periods or good markets precipitate higher vol
 
-baf = baf.dropna()   
+baf = baf.dropna() 
+baf = baf.truncate(after = '2018-09-30')  
 
-q4 = baf['RTY Index'][(baf['regime'] == 4)].dropna() #i think this is using the returns of zero
+q4 = baf['M1WOMOM Index'][(baf['regime'] == 4)].dropna() #i think this is using the returns of zero
 print(q4.mean())
 print(q4.std())
+q4.hist(density=True, bins=50)
 
-q1 = baf['RTY Index'][(baf['regime'] == 1)].dropna()
+q1 = baf['M1WOMOM Index'][(baf['regime'] == 1)].dropna()
 print(q1.mean())
 print(q1.std())
 
-q3 = baf['RTY Index'][(baf['regime'] == 3)].dropna()
+q3 = baf['M1WOMOM Index'][(baf['regime'] == 3)].dropna()
 print(q3.mean())
 print(q3.std())
+q3.hist(density=True, bins=50)
 
-q2 = baf['RTY Index'][(baf['regime'] == 2)].dropna()
+q2 = baf['M1WOMOM Index'][(baf['regime'] == 2)].dropna()
 print(q2.mean())
 print(q2.std())
+q2.hist(density=True, bins=50 )
 
-q_4 = baf['INDU Index'][(baf['regime'] == 4)].dropna()
+q_4 = baf['NDX Index'][(baf['regime'] == 4)].dropna()
 print(q_4.mean())
 print(q_4.std())
+q_4.hist(density=True, bins=50)
 
-q_1 = baf['INDU Index'][(baf['regime'] == 1)].dropna()
+q_1 = baf['NDX Index'][(baf['regime'] == 1)].dropna()
 print(q_1.mean())
 print(q_1.std())
+q_1.hist(density=True, bins=50)
 
-q_3 = baf['INDU Index'][(baf['regime'] == 3)].dropna()
+
+q_3 = baf['NDX Index'][(baf['regime'] == 3)].dropna()
 print(q_3.mean())
 print(q_3.std())
+q_3.hist(density=True, bins=50)
 
-q_2 = baf['INDU Index'][(baf['regime'] == 2)].dropna()
+
+q_2 = baf['NDX Index'][(baf['regime'] == 2)].dropna()
 print(q_2.mean())
 print(q_2.std())
+q_2.hist(density=True, bins=50)
+
 
 q_4_spx = baf['SPX Index'][(baf['regime'] == 4)].dropna()
 print(q_4_spx.mean())
 print(q_4_spx.std())
+q_4_spx.hist(density=True, bins=50)
+
 
 q_1_spx = baf['SPX Index'][(baf['regime'] == 1)].dropna()
 print(q_1_spx.mean())
 print(q_1_spx.std())
+q_4_spx.hist(density=True, bins=50)
+
 
 q_3_spx = baf['SPX Index'][(baf['regime'] == 3)].dropna()
 print(q_3_spx.mean())
 print(q_3_spx.std())
+q_4_spx.hist(density=True, bins=50)
+
 
 q_2_spx = baf['SPX Index'][(baf['regime'] == 2)].dropna()
 print(q_2_spx.mean())
 print(q_2_spx.std())
+q_4_spx.hist(density=True, bins=50)
+
 
       
 
